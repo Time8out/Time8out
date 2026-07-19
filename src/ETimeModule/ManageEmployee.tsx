@@ -24,6 +24,18 @@ export default function ManageEmployee() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // The Special (owner) user's row carries the company's subscription info.
+  // Found from the already-loaded `employees` list (same CompanyCode) rather than a
+  // separate lookup, since the logged-in user managing employees may not be the Special user themselves.
+  const specialUser = employees.find(e => e.UserType === "Special") as
+    (Employee & { SubscriptionLevel?: { Type: string; EmployeeLimit: number | string }[]; BrandAmbassador?: boolean }) | undefined;
+  const subscriptionEntry = specialUser?.SubscriptionLevel?.[0];
+  const subscriptionType: string | null = subscriptionEntry?.Type ?? null;
+  const isBrandAmbassador = specialUser?.BrandAmbassador === true;
+  const employeeLimit: number | null = isBrandAmbassador
+    ? null
+    : typeof subscriptionEntry?.EmployeeLimit === "number" ? subscriptionEntry.EmployeeLimit : null;
+
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<NewEmployeeForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<NewEmployeeForm>>({});
@@ -80,6 +92,8 @@ export default function ManageEmployee() {
     return true;
   }
 
+  const limitReached = employeeLimit !== null && employees.length >= employeeLimit;
+
   async function handleAdd() {
     if (!validateForm()) return;
     await submitAdd();
@@ -87,6 +101,13 @@ export default function ManageEmployee() {
 
   async function submitAdd() {
     setAddLoading(true); setAddMsg(null); setShowEmployeeIdWarning(false);
+
+    if (limitReached) {
+      setAddMsg({ type: "error", text: `You've reached your ${subscriptionType ?? "current"} plan's limit of ${employeeLimit} employees. Upgrade your plan to add more.` });
+      setAddLoading(false);
+      return;
+    }
+
     const { data: existing } = await supabase.from("users").select("Email").eq("Email", form.Email).maybeSingle();
     if (existing) { setAddMsg({ type: "error", text: "Email already registered." }); setAddLoading(false); return; }
 
@@ -199,14 +220,25 @@ export default function ManageEmployee() {
             <h1 className="me-title">Manage Employees</h1>
             <p className="me-subtitle">Company: <strong>{companyName}</strong> · Code: <code className="me-code">{companyCode}</code></p>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => { setShowAdd(true); setForm(EMPTY_FORM); setFormErrors({}); setAddMsg(null); setShowEmployeeIdWarning(false); }}>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => { setShowAdd(true); setForm(EMPTY_FORM); setFormErrors({}); setAddMsg(null); setShowEmployeeIdWarning(false); }}
+            disabled={limitReached}
+            title={limitReached ? `Employee limit reached for the ${subscriptionType ?? "current"} plan.` : undefined}
+          >
             + Add Employee
           </button>
         </div>
 
+        {limitReached && (
+          <div className="me-alert warning" style={{ marginBottom: "var(--space-5)" }}>
+            ⚠️ You've reached your <strong>{subscriptionType ?? "current"}</strong> plan's limit of <strong>{employeeLimit}</strong> employees. Upgrade your plan to add more.
+          </div>
+        )}
+
         <div className="me-stats-row">
           {[
-            { num: employees.length, label: "Total", color: "var(--color-text)" },
+            { num: employeeLimit !== null ? `${employees.length} / ${employeeLimit}` : employees.length, label: subscriptionType ? `${subscriptionType} Plan` : "Total", color: "var(--color-text)" },
             { num: employees.filter(e => e.UserType === "Special").length, label: "Owners", color: "var(--brand-orange)" },
             { num: employees.filter(e => e.UserType === "Privilege").length, label: "Admins", color: "var(--brand-blue)" },
             { num: employees.filter(e => e.UserType === "Employee").length, label: "Employees", color: "var(--color-text-muted)" },

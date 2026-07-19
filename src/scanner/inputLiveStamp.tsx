@@ -1,5 +1,7 @@
 // inputLiveStamp.tsx
 import { supabase } from '../../utils/supabase';
+import { HolidayCalculator } from '../ETimeModule/Computer/HolidayCalculator';
+import { RegularScheduleComputer } from '../ETimeModule/Computer/RegularScheduleComputer';
 
 type BreakEntry = {
   breakIn: string;
@@ -32,7 +34,6 @@ const GRACE_PERIOD = 2;
 const WINDOW = 15;
 const COOLDOWN_MS = 3000;
 
-// ── Guards ──────────────────────────────────────────────────
 const processingMap = new Map<string, boolean>();
 const cooldownMap = new Map<string, number>();
 
@@ -58,18 +59,33 @@ function isWithinWindow(scheduledTime: string, currentTime: string): boolean {
 
 function computeTotalWorkingMinutes(schedule: ShiftEntry[]): number {
   let total = 0;
-
   for (const shift of schedule) {
     let shiftInMin = timeToMinutes(shift.timeIn);
     let shiftOutMin = timeToMinutes(shift.TimeOut);
-
-    // Handle midnight crossing
     if (shiftOutMin <= shiftInMin) shiftOutMin += 24 * 60;
-
     total += shiftOutMin - shiftInMin;
   }
-
   return total;
+}
+
+async function checkHolidayForDate(companyCode: string, attendanceDate: string): Promise<boolean> {
+  const dateObj = new Date(attendanceDate + 'T00:00:00');
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+
+  const { data: allHolidays } = await supabase
+    .from('Holidays')
+    .select('Date, Recurring')
+    .eq('CompanyCode', companyCode);
+
+  return (allHolidays ?? []).some(h => {
+    if (h.Date === attendanceDate) return true;
+    if (h.Recurring) {
+      const hDate = new Date(h.Date + 'T00:00:00');
+      return hDate.getMonth() + 1 === month && hDate.getDate() === day;
+    }
+    return false;
+  });
 }
 
 export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: string; companyCode: string }): Promise<StampResult> {
@@ -77,13 +93,11 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
 
   const key = `${EmployeeID}-${companyCode}`;
 
-  // ── Debounce guard ──────────────────────────────────────
   if (processingMap.get(key)) {
     console.log('[inputLiveStamp] Already processing — skipping duplicate.');
     return { success: false, message: 'Already processing — please wait.' };
   }
 
-  // ── Cooldown guard ──────────────────────────────────────
   const lastStamp = cooldownMap.get(key) ?? 0;
   if (Date.now() - lastStamp < COOLDOWN_MS) {
     console.log('[inputLiveStamp] Cooldown active — skipping scan.');
@@ -93,7 +107,7 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
   processingMap.set(key, true);
 
   try {
-    // ── Step 1: Get current time from Supabase server ───────
+    // ── Step 1: Get current time ────────────────────────────
     const { data: serverTime, error: timeError } = await supabase.rpc('get_server_time');
     if (timeError || !serverTime) {
       console.error('[inputLiveStamp] Failed to get server time:', timeError?.message);
@@ -103,15 +117,12 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
     const now = new Date(serverTime);
     const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
     const currentTime = now.toLocaleTimeString('en-GB', {
-      timeZone: 'Asia/Manila',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
+      timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false,
     });
 
     console.log('[inputLiveStamp] Current time:', currentTime, today);
 
-    // ── Step 2: Find open attendance row (night shift support) ──
+    // ── Step 2: Find open attendance row ───────────────────
     const { data: openRow, error: openRowError } = await supabase
       .from('Attendance')
       .select('AttendanceDate, ScheduleTimeAndAttendance, StampsFeedback, TimeDeduction, status')
@@ -127,7 +138,7 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
       return { success: false, message: 'Error finding attendance record.' };
     }
 
-    // ── Step 3: Fall back to today if no open row ──────────
+    // ── Step 3: Fall back to today ─────────────────────────
     let attendance = openRow;
     let attendanceDate = openRow?.AttendanceDate ?? today;
 
@@ -149,7 +160,7 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
       attendanceDate = today;
     }
 
-    // ── Step 4: Check if already Finished ──────────────────
+    // ── Step 4: Already finished? ──────────────────────────
     if (attendance!.status === 'Finished') {
       console.log('[inputLiveStamp] Employee already finished — skipping.');
       return { success: false, message: 'You have already completed your shift for today.' };
@@ -168,16 +179,22 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
     let isLastStamp = false;
     let resultMessage = '';
 
-    // ── Step 5: Find first empty Actual field and fill it ───
+    // ── Step 5: Find first empty Actual field and fill it ──
     outer:
     for (let si = 0; si < schedule.length; si++) {
       const shift = schedule[si];
       const isLastShift = si === schedule.length - 1;
 
-      // ActualTimeIn — only within 15 min window
+      // ActualTimeIn — block only if too early
       if (!shift.ActualTimeIn) {
         console.log('[inputLiveStamp] shift.ActualTimeIn value:', JSON.stringify(shift.ActualTimeIn));
-        if (!isWithinWindow(shift.timeIn, currentTime)) {
+
+        const scheduledMin = timeToMinutes(shift.timeIn);
+        let currentMin = timeToMinutes(currentTime);
+        if (currentMin < scheduledMin - WINDOW && scheduledMin - currentMin > 12 * 60) currentMin += 24 * 60;
+        const minutesUntilShift = scheduledMin - currentMin;
+
+        if (minutesUntilShift > WINDOW) {
           return {
             success: false,
             message: `Not yet time for Time In — scheduled at ${shift.timeIn}. Please scan within 15 minutes of your schedule.`,
@@ -185,7 +202,6 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
         }
 
         shift.ActualTimeIn = currentTime;
-
         const diff = diffMinutes(shift.timeIn, currentTime);
         if (diff > GRACE_PERIOD) {
           feedback.push({ type: 'late', scheduledTime: shift.timeIn, actualTime: currentTime, deductionMinutes: diff });
@@ -204,7 +220,6 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
       for (let bi = 0; bi < shift.breaks.length; bi++) {
         const b = shift.breaks[bi];
 
-        // ActualBreakIn — only within 15 min window
         if (!b.ActualBreakIn) {
           if (!isWithinWindow(b.breakIn, currentTime)) {
             return {
@@ -212,17 +227,14 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
               message: `Not yet time for Break — scheduled at ${b.breakIn}. Please scan within 15 minutes of your break.`,
             };
           }
-
           b.ActualBreakIn = currentTime;
           resultMessage = 'Break In recorded successfully.';
           stamped = true;
           break outer;
         }
 
-        // ActualBreakOut — anytime
         if (b.ActualBreakIn && !b.ActualBreakOut) {
           b.ActualBreakOut = currentTime;
-
           const diff = diffMinutes(b.breakOut, currentTime);
           if (diff > GRACE_PERIOD) {
             feedback.push({ type: 'overbreak', scheduledTime: b.breakOut, actualTime: currentTime, deductionMinutes: diff });
@@ -232,16 +244,14 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
           } else {
             resultMessage = 'Break Out recorded successfully.';
           }
-
           stamped = true;
           break outer;
         }
       }
 
-      // ActualTimeOut — anytime
+      // ActualTimeOut
       if (shift.ActualTimeIn && !shift.ActualTimeOut) {
         shift.ActualTimeOut = currentTime;
-
         const diff = diffMinutes(currentTime, shift.TimeOut);
         if (diff > GRACE_PERIOD) {
           feedback.push({ type: 'earlyout', scheduledTime: shift.TimeOut, actualTime: currentTime, deductionMinutes: diff });
@@ -251,7 +261,6 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
         } else {
           resultMessage = 'Time Out recorded successfully.';
         }
-
         stamped = true;
         isLastStamp = isLastShift;
         break outer;
@@ -263,11 +272,23 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
       return { success: false, message: 'All stamps already filled for today.' };
     }
 
-    // ── Step 6: Compute TotalWorkingHours if last stamp ────
+    // ── Step 6: Compute TotalWorkingHours + trigger calculators ──
     let totalWorkingMinutes: number | null = null;
     if (isLastStamp) {
       totalWorkingMinutes = computeTotalWorkingMinutes(schedule);
       console.log('[inputLiveStamp] Total working minutes:', totalWorkingMinutes);
+
+      // Check if attendance date is a holiday
+      const isHoliday = await checkHolidayForDate(companyCode, attendanceDate);
+      console.log('[inputLiveStamp] Is holiday:', isHoliday, 'for date:', attendanceDate);
+
+      if (isHoliday) {
+        console.log('[inputLiveStamp] → Calling HolidayCalculator');
+        await HolidayCalculator({ EmployeeID, companyCode, attendanceDate });
+      } else {
+        console.log('[inputLiveStamp] → Calling RegularScheduleComputer');
+        await RegularScheduleComputer({ EmployeeID, companyCode, attendanceDate });
+      }
     }
 
     // ── Step 7: Update Attendance row ──────────────────────
@@ -289,9 +310,7 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
       return { success: false, message: 'Failed to save stamp.' };
     }
 
-    // ── Set cooldown after successful stamp ─────────────────
     cooldownMap.set(key, Date.now());
-
     console.log('[inputLiveStamp] Stamp recorded successfully:', currentTime, 'for date:', attendanceDate);
     if (isLastStamp) console.log(`[inputLiveStamp] Employee marked as Finished. Total working minutes: ${totalWorkingMinutes}`);
 

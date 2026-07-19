@@ -9,6 +9,7 @@ import { getInternetTime } from '../../utils/Getinternettime';
 import { fillAttendanceDetails } from './fillAttendanceDetails';
 import { checkScheduleType } from './checkScheduleType';
 import { inputLiveStamp } from './inputLiveStamp';
+import { computeOT } from './OTComputation';
 import type { StampResult } from './inputLiveStamp';
 
 export async function handleScan(scannedValue: string, companyCode: string): Promise<StampResult> {
@@ -51,16 +52,16 @@ export async function handleScan(scannedValue: string, companyCode: string): Pro
 
   console.log('[ScannerLogic] existingAttendance:', JSON.stringify(existingAttendance));
 
-  // ── Step 4: Fill schedule only if empty ────────────────
-  if (!existingAttendance?.ScheduleTimeAndAttendance ||
-      existingAttendance.ScheduleTimeAndAttendance.length === 0) {
-    await checkScheduleType({ EmployeeID, companyCode });
-  } else {
-    console.log('[ScannerLogic] Schedule already exists — skipping checkScheduleType.');
-  }
+  // ── Step 4: Always call checkScheduleType ─────────────
+  // Let checkScheduleType decide whether to fill, overwrite, or skip.
+  // It handles: override schedules, approved OT, holidays, and regular schedules.
+  await checkScheduleType({ EmployeeID, companyCode });
 
   // ── Step 5: Record the live stamp ──────────────────────
   const result = await inputLiveStamp({ EmployeeID, companyCode });
+
+  // ── Step 6: OT Computation ─────────────────────────────
+  await computeOT({ EmployeeID, companyCode });
 
   return result;
 }

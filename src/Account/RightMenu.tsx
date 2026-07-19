@@ -3,29 +3,41 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../utils/supabase";
 
 const MENU_ICONS: Record<string, string> = {
+  "Profile": "👤",
   Attendance: "🗓",
   Schedule: "📋",
-  Leave: "🏖",
   Overtime: "⏱",
-  Dispute: "⚠",
+  "Attendance Control": "🛠",
   "Manage Employee": "👥",
- "Company Scheduler": "🏢",
- "Scanner": "🕠",
+  "Company Scheduler": "🏢",
+  "Scanner": "🕠",
+  "Salary Adjustments": "💰",
+  "Formula Templates": "📐",
+  "Pay Structure": "⚙",
+  "Holidays": "🎉",
+  "Over-Time Approval": "✅",
 };
 
 const MENU_PATHS: Record<string, string> = {
+  "Profile": "/ETimeModule/Profile",
   Attendance: "/ETimeModule/EmployeeTime",
   Schedule: "/ETimeModule/Schedule",
-  Leave: "/ETimeModule/Leave",
   Overtime: "/ETimeModule/Overtime",
-  Dispute: "/ETimeModule/Dispute",
+  "Attendance Control": "/ETimeModule/AttendanceControl",
   "Manage Employee": "/ETimeModule/ManageEmployee",
   "Company Scheduler": "/ETimeModule/CompanyScheduler",
+  "Salary Adjustments": "/ETimeModule/SalaryAdjustments",
+  "Formula Templates": "/ETimeModule/FormulaTemplateManager",
+  "Pay Structure": "/ETimeModule/PaySettings",
+  "Holidays": "/ETimeModule/Holidays",
+  "Over-Time Approval": "/ETimeModule/OverTimeApproval",
   "Scanner": "/ETimeModule/Scanner",
 };
 
+// Menus visible to employees only
+const EMPLOYEE_MENUS = ["Profile", "Attendance", "Overtime"];
+
 interface RightMenuProps {
-  /** Called after a menu item is tapped — used by Layout to close the mobile drawer */
   onNavigate?: () => void;
 }
 
@@ -52,7 +64,7 @@ function RightMenu({ onNavigate }: RightMenuProps) {
 
         const { data: userData, error: userError } = await supabase
           .from("users")
-          .select("System")
+          .select("System, UserType")
           .eq("Email", email)
           .single();
 
@@ -62,6 +74,14 @@ function RightMenu({ onNavigate }: RightMenuProps) {
           return;
         }
 
+        // Employee — only show Profile, Attendance, Overtime
+        if (userData.UserType === "Employee") {
+          setMenus(EMPLOYEE_MENUS);
+          setLoading(false);
+          return;
+        }
+
+        // Privilege or Special — show all menus from RightMenus table
         const systemObj = userData.System[0];
         const systemType = Object.keys(systemObj).find(
           (key) => systemObj[key] === "YES"
@@ -98,7 +118,7 @@ function RightMenu({ onNavigate }: RightMenuProps) {
 
   const handleMenuClick = (menu: string) => {
     navigate(MENU_PATHS[menu] ?? "#");
-    onNavigate?.(); // close drawer on mobile
+    onNavigate?.();
   };
 
   if (loading) {
@@ -184,7 +204,6 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "var(--space-6) 0",
     fontFamily: "var(--font-base)",
     boxSizing: "border-box",
-    // On mobile this sits inside a fixed drawer so it fills the drawer height
     overflowY: "auto",
   },
   header: {
