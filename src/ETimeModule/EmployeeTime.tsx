@@ -63,7 +63,7 @@ function fmt(d: Date) { return d.toISOString().split("T")[0]; }
 
 export default function EmployeeTime() {
   const [employeeID, setEmployeeID] = useState<string | null>(null);
-  const [payStructure, setPayStructure] = useState<{ Structure: string; Formula: string } | null>(null);
+  const [companyCode, setCompanyCode] = useState<string | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,11 +89,11 @@ export default function EmployeeTime() {
     const decoded = atob(raw);
     const email = decoded.split(":")[1];
     setUserEmail(email);
-    supabase.from("users").select("EmployeeID, PayStructure, InitialLogin, UserType").eq("Email", email).single()
+    supabase.from("users").select("EmployeeID, CompanyCode, InitialLogin, UserType").eq("Email", email).single()
       .then(({ data, error: e }) => {
         if (e || !data) { setError("Could not load user."); return; }
         setEmployeeID(data.EmployeeID);
-        setPayStructure(data.PayStructure?.[0] ?? null);
+        setCompanyCode(data.CompanyCode);
         const requiresPasswordChange = data.UserType !== "Special" && data.InitialLogin === true;
         if (requiresPasswordChange) setForcePasswordChange(true);
       });
@@ -160,30 +160,6 @@ export default function EmployeeTime() {
   }).length;
   const totalDeduction = records.reduce((sum, r) => sum + (r.TimeDeduction ?? 0), 0);
   const totalHours = records.reduce((sum, r) => sum + (r.TotalWorkingHours ?? 0), 0);
-
-  // ── Monetary deduction from TimeDeduction minutes ────────
-  function computeMonetaryDeduction(): number {
-    if (!payStructure || totalDeduction === 0) return 0;
-    const rate = parseFloat(payStructure.Formula);
-    const structure = payStructure.Structure?.toLowerCase();
-    if (structure === "hourly") {
-      // deduction per minute = hourlyRate / 60
-      return (totalDeduction / 60) * rate;
-    }
-    if (structure === "monthly") {
-      // deduction per minute = monthlyRate / totalScheduledMinutes in period
-      const totalScheduledMinutes = totalHours * 60;
-      if (totalScheduledMinutes === 0) return 0;
-      return (totalDeduction / totalScheduledMinutes) * rate;
-    }
-    if (structure === "daily") {
-      // deduction per minute = dailyRate / 480 (8h shift) or use totalHours/presentDays
-      const avgMinutesPerDay = presentDays > 0 ? (totalHours * 60) / presentDays : 480;
-      return (totalDeduction / avgMinutesPerDay) * rate;
-    }
-    return 0;
-  }
-  const monetaryDeduction = computeMonetaryDeduction();
 
   return (
     <>
@@ -470,15 +446,14 @@ export default function EmployeeTime() {
           </>
       </div>
 
-      {showPayslip && employeeID && (
+      {showPayslip && employeeID && companyCode && (
         <Payslip
           employeeID={employeeID}
+          companyCode={companyCode}
           dateFrom={dateFrom}
           dateTo={dateTo}
           totalWorkingHours={totalHours}
-          totalDays={presentDays}
           totalDeductionMinutes={totalDeduction}
-          monetaryDeduction={monetaryDeduction}
           onClose={() => setShowPayslip(false)}
         />
       )}

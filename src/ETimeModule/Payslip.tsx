@@ -11,7 +11,6 @@ interface Props {
   dateFrom: string;
   dateTo: string;
   totalWorkingHours: number; // kept for display only, no longer used in pay math
-  totalDays: number;         // kept for display only, no longer used in pay math
   totalDeductionMinutes: number; // kept for display only — the peso amount is now baked into Regular/Holiday already
   onClose: () => void;
 }
@@ -61,7 +60,6 @@ export default function Payslip({
   dateFrom,
   dateTo,
   totalWorkingHours,
-  totalDays,
   totalDeductionMinutes,
   onClose,
 }: Props) {
