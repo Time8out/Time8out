@@ -194,9 +194,8 @@ function LinkRow({ route, label }: { route: string; label: string }) {
   );
 }
 
-function ScannerTile({ tile, index }: {
+function ScannerTile({ tile }: {
   tile: typeof tiles[0];
-  index: number;
 }) {
   const handleClick = () => {
     window.open(`${window.location.origin}${tile.route}`, '_blank', 'noopener,noreferrer');
@@ -364,8 +363,8 @@ function Scanner() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: 20,
         }}>
-          {tiles.map((tile, i) => (
-            <ScannerTile key={tile.id} tile={tile} index={i} />
+          {tiles.map((tile) => (
+            <ScannerTile key={tile.id} tile={tile} />
           ))}
         </div>
 

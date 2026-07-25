@@ -5,7 +5,6 @@ import BreaksCreator from './BreaksCreator'
 import AssignScheduleTable from './AssignScheduleTable'
 
 function CompanyScheduler() {
-  const [email, setEmail] = useState<string | null>(null)
   const [companyCode, setCompanyCode] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const hasFetched = useRef(false)
@@ -27,7 +26,6 @@ function CompanyScheduler() {
       const decoded = atob(raw)
       const parts = decoded.split(':')
       const userEmail = parts[1]
-      setEmail(userEmail)
 
       const { data, error } = await supabase
         .from('users')

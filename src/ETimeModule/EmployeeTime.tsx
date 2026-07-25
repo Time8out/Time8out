@@ -66,7 +66,6 @@ export default function EmployeeTime() {
   const [payStructure, setPayStructure] = useState<{ Structure: string; Formula: string } | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fetched, setFetched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showPayslip, setShowPayslip] = useState(false);
@@ -136,7 +135,7 @@ export default function EmployeeTime() {
     if (!employeeID) { setError("Employee ID not found."); return; }
     if (!dateFrom || !dateTo) { setError("Please select a date range."); return; }
     if (dateFrom > dateTo) { setError("Start date must be before end date."); return; }
-    setLoading(true); setError(null); setFetched(false); setExpandedId(null);
+    setLoading(true); setError(null); setExpandedId(null);
     const { data, error: e } = await supabase
       .from("Attendance")
       .select("*")
@@ -145,9 +144,13 @@ export default function EmployeeTime() {
       .lte("AttendanceDate", dateTo)
       .order("AttendanceDate", { ascending: false });
     if (e) { setError(e.message); }
-    else { setRecords(data ?? []); setFetched(true); }
+    else { setRecords(data ?? []); }
     setLoading(false);
   }
+
+  useEffect(() => {
+    if (employeeID) fetchAttendance();
+  }, [employeeID]);
 
   const totalDays = records.length;
   const presentDays = records.filter(r => r.status === "Finished" && (r.TotalWorkingHours ?? 0) > 0).length;
@@ -305,26 +308,23 @@ export default function EmployeeTime() {
         {error && <div className="et-alert">{error}</div>}
 
         {/* ── Stats ── */}
-        {fetched && (
-          <div className="et-stats">
-            {[
-              { num: totalDays,                  label: "Total Days",      color: "var(--color-text)" },
-              { num: presentDays,                label: "Present",         color: "#15803d" },
-              { num: absentDays,                 label: "Absent",          color: "#dc2626" },
-              { num: formatMinutes(totalDeduction), label: "Deductions",   color: "#b45309" },
-              { num: formatHours(totalHours),    label: "Total Hours",     color: "var(--brand-blue)" },
-            ].map(({ num, label, color }) => (
-              <div key={label} className="et-stat">
-                <div className="et-stat-num" style={{ color }}>{num}</div>
-                <div className="et-stat-label">{label}</div>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="et-stats">
+          {[
+            { num: totalDays,                  label: "Total Days",      color: "var(--color-text)" },
+            { num: presentDays,                label: "Present",         color: "#15803d" },
+            { num: absentDays,                 label: "Absent",          color: "#dc2626" },
+            { num: formatMinutes(totalDeduction), label: "Deductions",   color: "#b45309" },
+            { num: formatHours(totalHours),    label: "Total Hours",     color: "var(--brand-blue)" },
+          ].map(({ num, label, color }) => (
+            <div key={label} className="et-stat">
+              <div className="et-stat-num" style={{ color }}>{num}</div>
+              <div className="et-stat-label">{label}</div>
+            </div>
+          ))}
+        </div>
 
         {/* ── Table ── */}
-        {fetched && (
-          <>
+        <>
             <div className="et-table-wrap">
               {records.length === 0 ? (
                 <div className="et-empty">No attendance records found for the selected date range.</div>
@@ -468,7 +468,6 @@ export default function EmployeeTime() {
               </div>
             )}
           </>
-        )}
       </div>
 
       {showPayslip && employeeID && (

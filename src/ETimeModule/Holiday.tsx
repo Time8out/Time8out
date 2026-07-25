@@ -11,12 +11,6 @@ interface Holiday {
   Recurring: boolean;
 }
 
-function fmtDate(d: string): string {
-  return new Date(d + "T00:00:00").toLocaleDateString("en-PH", {
-    weekday: "short", month: "long", day: "numeric", year: "numeric",
-  });
-}
-
 function fmtMonthDay(d: string): string {
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString("en-PH", { month: "long", day: "numeric" });

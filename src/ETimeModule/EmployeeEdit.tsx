@@ -32,29 +32,6 @@ interface EmployeeEditProps {
    QR CODE — real encoding via `qrcode` library
    Renders into a <canvas> then displayed as <img>
 ══════════════════════════════════════════════════ */
-function QRCodeImage({ value, size = 148 }: { value: string; size?: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (!canvasRef.current || !value) return;
-    QRCode.toCanvas(canvasRef.current, value, {
-      width: size,
-      margin: 2,
-      color: { dark: "#111827", light: "#ffffff" },
-      errorCorrectionLevel: "M",
-    }).catch(console.error);
-  }, [value, size]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      width={size}
-      height={size}
-      style={{ display: "block", imageRendering: "pixelated" }}
-    />
-  );
-}
-
 // Expose a ref-compatible wrapper so downloadAsPNG can grab a canvas
 const QRCodeCanvas = forwardRef<HTMLCanvasElement, { value: string; size?: number }>(
   ({ value, size = 148 }, ref) => {
@@ -84,8 +61,8 @@ const QRCodeCanvas = forwardRef<HTMLCanvasElement, { value: string; size?: numbe
    BARCODE — real Code 128 via `bwip-js` library
    Renders directly into a <canvas>
 ══════════════════════════════════════════════════ */
-const BarcodeCanvas = forwardRef<HTMLCanvasElement, { value: string; width?: number; barHeight?: number }>(
-  ({ value, width = 230, barHeight = 64 }, ref) => {
+const BarcodeCanvas = forwardRef<HTMLCanvasElement, { value: string; barHeight?: number }>(
+  ({ value, barHeight = 64 }, ref) => {
     const internalRef = useRef<HTMLCanvasElement>(null);
     const canvasRef = (ref as React.RefObject<HTMLCanvasElement>) ?? internalRef;
 
