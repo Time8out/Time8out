@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /AdminAccess
+Disallow: /scanner/
+Disallow: /ETimeModule/
+Disallow: /ETimeModuleAdmin/
+Disallow: /CompanyDetails
+
+Sitemap: https://time8out.com/sitemap.xml
