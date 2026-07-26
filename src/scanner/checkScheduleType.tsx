@@ -25,7 +25,18 @@ function timeToMinutes(time: string): number {
 }
 
 function distributeSchedule(scheduleSlots: ScheduleSlot[], breakSlots: BreakSlot[]): ShiftEntry[] {
-  return scheduleSlots.map(slot => {
+  // Dedupe slots sharing the same timeIn+timeOut (e.g. OT filed more than once
+  // for the same window) so they don't turn into separate stampable shifts —
+  // that's what let a single Time-In scan get logged as "late" repeatedly.
+  const seen = new Set<string>();
+  const dedupedSlots = scheduleSlots.filter(slot => {
+    const key = `${slot.timeIn}-${slot.timeOut}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return dedupedSlots.map(slot => {
     const shiftInMin = timeToMinutes(slot.timeIn);
     let shiftOutMin = timeToMinutes(slot.timeOut);
     if (shiftOutMin <= shiftInMin) shiftOutMin += 24 * 60;

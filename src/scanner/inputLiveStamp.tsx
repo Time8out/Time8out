@@ -164,6 +164,18 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
       const shift = schedule[si];
       const isLastShift = si === schedule.length - 1;
 
+      // Duplicate shift slot (same timeIn+TimeOut as an earlier one — e.g. OT
+      // filed twice for the same window before the schedule was deduped
+      // upstream). Mirror the original's stamps instead of treating this as
+      // its own independently-scannable shift, so one Time In/Out scan can't
+      // ever be logged twice.
+      const original = schedule.slice(0, si).find(s => s.timeIn === shift.timeIn && s.TimeOut === shift.TimeOut);
+      if (original) {
+        shift.ActualTimeIn = original.ActualTimeIn;
+        shift.ActualTimeOut = original.ActualTimeOut;
+        continue;
+      }
+
       // ActualTimeIn — block only if too early
       if (!shift.ActualTimeIn) {
         console.log('[inputLiveStamp] shift.ActualTimeIn value:', JSON.stringify(shift.ActualTimeIn));
