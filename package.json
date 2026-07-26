@@ -2,6 +2,8 @@
   "name": "time8out",
   "private": true,
   "version": "0.0.0",
+  "description": "Time8out — employee time tracking, attendance, and payroll management platform.",
+  "author": "Time8out",
   "homepage": "http://time8out.com/",
   "type": "module",
   "scripts": {

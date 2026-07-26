@@ -284,8 +284,7 @@ export default function AttendanceControl() {
   return (
     <>
       <style>{`
-        .ac-page{padding:var(--space-6);font-family:var(--font-base);width:100%;max-width:1180px;margin:0 auto;box-sizing:border-box}
-        @media(max-width:480px){.ac-page{padding:var(--space-4)}}
+        .ac-page{padding:clamp(var(--space-4),3vw,var(--space-8));font-family:var(--font-base);width:100%;;margin:0 auto;box-sizing:border-box}
 
         /* ── Header ── */
         .ac-header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-6)}
@@ -304,7 +303,7 @@ export default function AttendanceControl() {
         .ac-search-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-5);margin-bottom:var(--space-6);box-shadow:var(--shadow-xs)}
         .ac-search-title{display:flex;align-items:center;gap:8px;font-size:var(--font-size-sm);font-weight:700;color:var(--color-text);margin-bottom:var(--space-4)}
         .ac-search-row{display:grid;grid-template-columns:1fr 1fr auto;gap:var(--space-3);align-items:end}
-        @media(max-width:640px){.ac-search-row{grid-template-columns:1fr}}
+        @media(max-width:640px){.ac-search-row{grid-template-columns:1fr}.ac-search-row .btn{justify-self:start}}
         .ac-label{font-size:var(--font-size-sm);font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:var(--space-2)}
 
         /* ── Results table (desktop) ── */
@@ -343,7 +342,7 @@ export default function AttendanceControl() {
         @keyframes acFade{from{opacity:0}to{opacity:1}}
 
         /* ── Edit modal — wider, sticky footer, full-screen sheet on mobile ── */
-        .ac-modal{background:var(--color-white);border-radius:var(--radius-xl);box-shadow:var(--shadow-xl);width:100%;max-width:820px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;animation:acUp .2s cubic-bezier(.22,1,.36,1)}
+        .ac-modal{background:var(--color-white);border-radius:var(--radius-xl);box-shadow:var(--shadow-xl);width:100%;max-width:960px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;animation:acUp .2s cubic-bezier(.22,1,.36,1)}
         @media(max-width:640px){
           .ac-modal{max-width:100%;width:100%;height:100dvh;max-height:100dvh;border-radius:0}
         }
@@ -363,8 +362,7 @@ export default function AttendanceControl() {
         /* ── Sticky modal footer ── */
         .ac-modal-footer-wrap{flex-shrink:0;border-top:1px solid var(--color-border);background:var(--color-white);padding:var(--space-4) var(--space-6)}
         @media(max-width:480px){.ac-modal-footer-wrap{padding:var(--space-3) var(--space-4)}}
-        .ac-modal-footer{display:flex;justify-content:flex-end;gap:var(--space-3)}
-        @media(max-width:480px){.ac-modal-footer{flex-direction:column-reverse}.ac-modal-footer .btn{width:100%;justify-content:center}}
+        .ac-modal-footer{display:flex;justify-content:flex-end;gap:var(--space-3);flex-wrap:wrap}
         .ac-alert{padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);font-size:var(--font-size-sm);font-weight:500;margin-bottom:var(--space-4)}
         .ac-alert.error{background:var(--color-danger-light);color:var(--color-danger)}
         .ac-alert.success{background:var(--color-success-light);color:var(--color-success)}

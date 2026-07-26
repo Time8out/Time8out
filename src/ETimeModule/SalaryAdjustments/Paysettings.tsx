@@ -170,12 +170,13 @@ export default function PaySettings() {
   return (
     <>
       <style>{`
-        .ps-page{padding:var(--space-6);font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
+        .ps-page{padding:clamp(var(--space-4),4vw,var(--space-6));font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
         .ps-header{margin-bottom:var(--space-6)}
         .ps-title{font-size:var(--font-size-2xl);font-weight:700;color:var(--color-text);letter-spacing:-.02em;margin-bottom:4px}
+        @media(max-width:480px){.ps-title{font-size:var(--font-size-xl)}}
         .ps-sub{font-size:var(--font-size-sm);color:var(--color-text-muted)}
-        .ps-table-wrap{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm)}
-        .ps-table{width:100%;border-collapse:collapse}
+        .ps-table-wrap{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow-x:auto;box-shadow:var(--shadow-sm)}
+        .ps-table{width:100%;border-collapse:collapse;min-width:520px}
         .ps-table thead tr{border-bottom:2px solid var(--color-border)}
         .ps-table th{text-align:left;font-size:var(--font-size-xs);font-weight:700;color:var(--color-text-muted);letter-spacing:.07em;text-transform:uppercase;padding:10px 14px;white-space:nowrap}
         .ps-table td{padding:12px 14px;font-size:var(--font-size-sm);color:var(--color-text-secondary);border-bottom:1px solid var(--color-border);vertical-align:middle}
@@ -202,6 +203,7 @@ export default function PaySettings() {
         .pse-emp-id{font-size:var(--font-size-xs);color:var(--color-text-muted)}
         .pse-label{font-size:var(--font-size-sm);font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:var(--space-2)}
         .pse-structure-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);margin-bottom:var(--space-4)}
+        @media(max-width:380px){.pse-structure-grid{grid-template-columns:1fr}}
         .pse-structure-card{padding:var(--space-3);border-radius:var(--radius-lg);border:1.5px solid var(--color-border);cursor:pointer;transition:all .15s;text-align:center;background:var(--color-white)}
         .pse-structure-card:hover{border-color:var(--brand-orange);background:var(--brand-orange-light)}
         .pse-structure-card.active{border-color:var(--brand-orange);background:var(--brand-orange-light)}

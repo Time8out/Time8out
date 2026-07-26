@@ -189,7 +189,7 @@ function BreaksCreator({ CompanyCode }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', padding: '10px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <h2 className="text-secondary-title">Breaks</h2>
         <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
           + New Break
@@ -286,8 +286,8 @@ function BreaksCreator({ CompanyCode }: Props) {
 
             <div className="form-group">
               <label className="form-label">Schedule</label>
-              <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-                <div className="form-group" style={{ flex: 1 }}>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                <div className="form-group" style={{ flex: '1 1 120px' }}>
                   <label className="form-label">Break In</label>
                   <input
                     className="form-input"
@@ -296,7 +296,7 @@ function BreaksCreator({ CompanyCode }: Props) {
                     onChange={e => handleTimeSlotChange(0, 'breakIn', e.target.value)}
                   />
                 </div>
-                <div className="form-group" style={{ flex: 1 }}>
+                <div className="form-group" style={{ flex: '1 1 120px' }}>
                   <label className="form-label">Break Out</label>
                   <input
                     className="form-input"

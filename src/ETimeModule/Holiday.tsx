@@ -123,17 +123,24 @@ export default function Holidays() {
   return (
     <>
       <style>{`
-        .hol-page{padding:var(--space-6);font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
+        .hol-page{padding:clamp(var(--space-4),4vw,var(--space-6));font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
+        .hol-header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-6)}
+        .hol-kicker{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+        .hol-kicker-dot{width:8px;height:8px;border-radius:50%;background:var(--gradient-brand);flex-shrink:0}
+        .hol-kicker-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
         .hol-title{font-size:var(--font-size-2xl);font-weight:700;color:var(--color-text);letter-spacing:-.02em;margin-bottom:4px}
-        .hol-sub{font-size:var(--font-size-sm);color:var(--color-text-muted);margin-bottom:var(--space-5)}
-        .hol-stats{display:flex;gap:var(--space-3);margin-bottom:var(--space-5);flex-wrap:wrap}
-        .hol-stat{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-4);border-radius:99px;border:1px solid var(--color-border);background:var(--color-white);font-size:var(--font-size-xs);font-weight:600;color:var(--color-text-muted)}
-        .hol-stat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-        .hol-stat-val{font-weight:800;color:var(--color-text);margin-left:3px}
-        .hol-form-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-6);box-shadow:var(--shadow-xs)}
+        .hol-sub{font-size:var(--font-size-sm);color:var(--color-text-muted)}
+        .hol-stats{display:flex;gap:var(--space-3);flex-wrap:wrap}
+        .hol-stat{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:10px 16px;box-shadow:var(--shadow-xs);text-align:center;min-width:84px;transition:box-shadow .15s,transform .15s}
+        .hol-stat:hover{box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+        .hol-stat-icon{font-size:15px;line-height:1}
+        .hol-stat-val{font-size:var(--font-size-lg);font-weight:700;color:var(--color-text);line-height:1.1}
+        .hol-stat-label{font-size:10px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+        .hol-form-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-6);box-shadow:var(--shadow-xs);transition:box-shadow .2s}
+        .hol-form-card:hover{box-shadow:var(--shadow-sm)}
         .hol-form-band{height:4px;background:var(--gradient-brand)}
         .hol-form-body{padding:var(--space-5)}
-        .hol-form-title{font-size:var(--font-size-base);font-weight:700;color:var(--color-text);margin-bottom:var(--space-4)}
+        .hol-form-title{font-size:var(--font-size-base);font-weight:700;color:var(--color-text);margin-bottom:var(--space-4);display:flex;align-items:center;gap:8px}
         .hol-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-4)}
         @media(max-width:600px){.hol-form-grid{grid-template-columns:1fr}}
         .hol-label{font-size:var(--font-size-sm);font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:var(--space-2)}
@@ -163,19 +170,24 @@ export default function Holidays() {
         .hol-filter-btn.active{background:var(--color-text);color:white;border-color:var(--color-text)}
         .hol-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-faint);margin-bottom:var(--space-3);display:flex;align-items:center;gap:var(--space-2)}
         .hol-section-line{flex:1;height:1px;background:var(--color-border)}
-        .hol-empty{background:var(--color-bg-alt);border:1px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);text-align:center;font-size:var(--font-size-sm);color:var(--color-text-faint);font-style:italic;margin-bottom:var(--space-4)}
-        .hol-table-wrap{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-5)}
-        .hol-table{width:100%;border-collapse:collapse}
+        .hol-empty{background:var(--color-bg-alt);border:1px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-6) var(--space-4);text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--color-text-faint);margin-bottom:var(--space-4)}
+        .hol-empty-icon{font-size:26px;opacity:.6}
+        .hol-empty-text{font-size:var(--font-size-sm);font-style:italic}
+        .hol-table-wrap{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow-x:auto;margin-bottom:var(--space-5);box-shadow:var(--shadow-xs);transition:box-shadow .2s}
+        .hol-table-wrap:hover{box-shadow:var(--shadow-sm)}
+        .hol-table{width:100%;border-collapse:collapse;min-width:480px}
         .hol-table thead tr{border-bottom:2px solid var(--color-border)}
         .hol-table th{text-align:left;font-size:var(--font-size-xs);font-weight:700;color:var(--color-text-muted);letter-spacing:.07em;text-transform:uppercase;padding:10px 14px;white-space:nowrap}
         .hol-table td{padding:12px 14px;font-size:var(--font-size-sm);color:var(--color-text-secondary);border-bottom:1px solid var(--color-border);vertical-align:middle}
+        @media(max-width:480px){.hol-table td,.hol-table th{padding:10px 10px;font-size:var(--font-size-xs)}}
         .hol-table tbody tr:last-child td{border-bottom:none}
         .hol-table tbody tr{transition:background .12s}
         .hol-table tbody tr:hover{background:var(--color-bg)}
         .hol-type-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;border:1px solid}
         .hol-type-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
         .hol-rec-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;background:#e0f4fd;border:1px solid #bae6fd;color:#0369a1;margin-left:5px}
-        .hol-date-cell{font-weight:600;color:var(--color-text);white-space:nowrap}
+        .hol-date-cell{font-weight:600;color:var(--color-text);white-space:nowrap;position:relative;padding-left:20px !important}
+        .hol-date-cell::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--accent,var(--color-border))}
         .hol-name-cell{font-weight:600;color:var(--color-text)}
         .hol-delete-btn{padding:4px 10px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:transparent;font-size:11px;font-weight:700;color:var(--color-text-muted);cursor:pointer;font-family:var(--font-base);transition:all .15s;white-space:nowrap}
         .hol-delete-btn:hover{background:rgba(239,68,68,0.07);color:#dc2626;border-color:rgba(239,68,68,0.3)}
@@ -187,21 +199,45 @@ export default function Holidays() {
       `}</style>
 
       <div className="hol-page">
-        <h1 className="hol-title">Holidays</h1>
-        <p className="hol-sub">Manage company holidays for payroll and scheduling.</p>
+        <div className="hol-header">
+          <div>
+            <div className="hol-kicker">
+              <span className="hol-kicker-dot" />
+              <span className="hol-kicker-label">Payroll Settings</span>
+            </div>
+            <h1 className="hol-title">Holidays</h1>
+            <p className="hol-sub">Manage company holidays for payroll and scheduling.</p>
+          </div>
 
-        <div className="hol-stats">
-          <div className="hol-stat"><div className="hol-stat-dot" style={{ background: "#dc2626" }} />Regular<span className="hol-stat-val">{regularCount}</span></div>
-          <div className="hol-stat"><div className="hol-stat-dot" style={{ background: "#d97706" }} />Special<span className="hol-stat-val">{specialCount}</span></div>
-          <div className="hol-stat">🔁 Recurring<span className="hol-stat-val">{recurringCount}</span></div>
-          <div className="hol-stat">📅 Total<span className="hol-stat-val">{holidays.length}</span></div>
+          <div className="hol-stats">
+            <div className="hol-stat">
+              <div className="hol-stat-icon">🔴</div>
+              <div className="hol-stat-val">{regularCount}</div>
+              <div className="hol-stat-label">Regular</div>
+            </div>
+            <div className="hol-stat">
+              <div className="hol-stat-icon">🟡</div>
+              <div className="hol-stat-val">{specialCount}</div>
+              <div className="hol-stat-label">Special</div>
+            </div>
+            <div className="hol-stat">
+              <div className="hol-stat-icon">🔁</div>
+              <div className="hol-stat-val">{recurringCount}</div>
+              <div className="hol-stat-label">Recurring</div>
+            </div>
+            <div className="hol-stat">
+              <div className="hol-stat-icon">📅</div>
+              <div className="hol-stat-val">{holidays.length}</div>
+              <div className="hol-stat-label">Total</div>
+            </div>
+          </div>
         </div>
 
         {/* Add form */}
         <div className="hol-form-card">
           <div className="hol-form-band" />
           <div className="hol-form-body">
-            <div className="hol-form-title">Add Holiday</div>
+            <div className="hol-form-title">🗓️ Add Holiday</div>
 
             <div className="hol-form-grid">
               <div>
@@ -261,7 +297,7 @@ export default function Holidays() {
         </div>
 
         {loading ? (
-          <div className="hol-empty">Loading…</div>
+          <div className="hol-empty"><span className="hol-empty-icon">⏳</span><span className="hol-empty-text">Loading…</span></div>
         ) : error ? (
           <div className="alert alert-danger">{error}</div>
         ) : (
@@ -295,7 +331,12 @@ export default function Holidays() {
               </>
             )}
 
-            {filtered.length === 0 && <div className="hol-empty">No holidays registered yet.</div>}
+            {filtered.length === 0 && (
+              <div className="hol-empty">
+                <span className="hol-empty-icon">🎉</span>
+                <span className="hol-empty-text">No holidays registered yet.</span>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -331,7 +372,7 @@ function HolidayTable({ holidays, confirmDeleteId, deleteLoading, onConfirmDelet
               : new Date(h.Date + "T00:00:00").toLocaleDateString("en-PH", { weekday: "short", month: "long", day: "numeric", year: "numeric" });
             return (
               <tr key={h.id}>
-                <td className="hol-date-cell">{dateDisplay}</td>
+                <td className="hol-date-cell" style={{ "--accent": style.color } as React.CSSProperties}>{dateDisplay}</td>
                 <td className="hol-name-cell">{h.Name}</td>
                 <td>
                   <span className="hol-type-badge" style={{ background: style.bg, color: style.color, borderColor: style.border }}>

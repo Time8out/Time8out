@@ -396,10 +396,10 @@ function Scanner() {
       <div style={{
         background: '#ffffff',
         borderBottom: '1px solid #e5e7eb',
-        padding: '20px 24px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        padding: 'clamp(12px, 2vw, 20px) clamp(16px, 3vw, 24px)',
       }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ width: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
               <div style={{
@@ -424,13 +424,12 @@ function Scanner() {
 
       <div style={{
         flex: 1,
-        maxWidth: 960,
         width: '100%',
-        margin: '0 auto',
-        padding: '40px 24px',
         display: 'flex',
         flexDirection: 'column',
         gap: 32,
+        padding: 'clamp(20px, 3vw, 32px) clamp(16px, 3vw, 24px)',
+        boxSizing: 'border-box',
       }}>
         {/* Tiles */}
         <div style={{

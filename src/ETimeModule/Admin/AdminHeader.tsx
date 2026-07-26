@@ -12,11 +12,13 @@ function AdminHeader() {
         .admin-nav {
           width: 100%;
           height: 60px;
-          background-color: var(--color-white);
+          background-color: rgba(255,255,255,0.85);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           border-bottom: 1px solid var(--color-border);
           display: flex;
           align-items: center;
-          padding: 0 var(--space-6);
+          padding: 0 clamp(var(--space-4), 4vw, var(--space-6));
           justify-content: space-between;
           box-shadow: var(--shadow-xs);
           position: sticky;
@@ -24,6 +26,9 @@ function AdminHeader() {
           z-index: 100;
           box-sizing: border-box;
           font-family: var(--font-base);
+        }
+        @media (max-width: 480px) {
+          .admin-nav-title { display: none; }
         }
         .admin-nav-left {
           display: flex;

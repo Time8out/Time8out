@@ -59,17 +59,20 @@ function Layout({ children }: LayoutProps) {
         .layout-nav {
           width: 100%;
           height: 60px;
-          background-color: var(--color-white);
+          background-color: rgba(255,255,255,0.85);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           border-bottom: 1px solid var(--color-border);
           display: flex;
           align-items: center;
-          padding: 0 var(--space-6);
+          padding: 0 clamp(var(--space-4), 4vw, var(--space-6));
           justify-content: space-between;
           box-shadow: var(--shadow-xs);
           position: sticky;
           top: 0;
           z-index: 100;
           box-sizing: border-box;
+          padding-top: env(safe-area-inset-top);
         }
 
         .layout-nav-left {
@@ -129,6 +132,7 @@ function Layout({ children }: LayoutProps) {
           font-weight: 700;
           font-size: var(--font-size-sm);
           flex-shrink: 0;
+          box-shadow: 0 0 0 2px var(--color-white), 0 0 0 3.5px var(--color-border);
         }
 
         .layout-user-info {
@@ -191,6 +195,8 @@ function Layout({ children }: LayoutProps) {
           position: fixed;
           inset: 0;
           background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(2px);
+          -webkit-backdrop-filter: blur(2px);
           z-index: 90;
           animation: overlay-in 0.2s ease;
         }
@@ -207,8 +213,9 @@ function Layout({ children }: LayoutProps) {
         .layout-content {
           flex: 1;
           min-width: 0;
-          padding: var(--space-6);
+          padding: clamp(var(--space-4), 3vw, var(--space-6));
           background-color: var(--color-bg);
+          padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
         }
 
         /* ── Mobile breakpoint ── */
@@ -226,10 +233,6 @@ function Layout({ children }: LayoutProps) {
           }
           .layout-sidebar-wrap.open {
             transform: translateX(0);
-          }
-
-          .layout-content {
-            padding: var(--space-4);
           }
         }
       `}</style>

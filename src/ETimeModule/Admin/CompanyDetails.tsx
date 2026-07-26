@@ -51,14 +51,15 @@ function CompanyDetails() {
   return (
     <>
       <style>{`
-        .cd-page { padding: var(--space-6); font-family: var(--font-base); }
+        .cd-page { padding: clamp(var(--space-4), 4vw, var(--space-6)); font-family: var(--font-base); }
         .cd-top-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-6); }
-        @media (max-width: 900px) { .cd-top-row { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .cd-top-row { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 600px) { .cd-top-row { grid-template-columns: 1fr; } }
         .cd-top-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--space-4); min-height: 140px; }
         .cd-title { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-text); letter-spacing: -0.02em; margin-bottom: var(--space-1); }
         .cd-subtitle { font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-6); }
-        .cd-table-wrap { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
-        .cd-table { width: 100%; border-collapse: collapse; }
+        .cd-table-wrap { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow-x: auto; box-shadow: var(--shadow-sm); }
+        .cd-table { width: 100%; border-collapse: collapse; min-width: 680px; }
         .cd-table thead tr { border-bottom: 2px solid var(--color-border); }
         .cd-table th { text-align: left; font-size: var(--font-size-xs); font-weight: 700; color: var(--color-text-muted); letter-spacing: 0.07em; text-transform: uppercase; padding: 10px 14px; white-space: nowrap; }
         .cd-table td { padding: 13px 14px; font-size: var(--font-size-sm); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); vertical-align: middle; }

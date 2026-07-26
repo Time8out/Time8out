@@ -123,7 +123,7 @@ function RightMenu({ onNavigate }: RightMenuProps) {
 
   if (loading) {
     return (
-      <aside style={styles.sidebar}>
+      <aside className="rm-sidebar" style={styles.sidebar}>
         <div style={styles.loadingWrap}>
           {[...Array(5)].map((_, i) => (
             <div key={i} className="skeleton" style={styles.skeletonItem} />
@@ -135,14 +135,20 @@ function RightMenu({ onNavigate }: RightMenuProps) {
 
   if (error) {
     return (
-      <aside style={styles.sidebar}>
+      <aside className="rm-sidebar" style={styles.sidebar}>
         <p style={styles.error}>{error}</p>
       </aside>
     );
   }
 
   return (
-    <aside style={styles.sidebar}>
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .rm-sidebar { width: 260px !important; }
+        }
+      `}</style>
+      <aside className="rm-sidebar" style={styles.sidebar}>
       <div style={styles.header}>
         <span className="text-xs text-muted">Menu</span>
       </div>
@@ -189,6 +195,7 @@ function RightMenu({ onNavigate }: RightMenuProps) {
         })}
       </nav>
     </aside>
+    </>
   );
 }
 

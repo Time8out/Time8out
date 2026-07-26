@@ -172,12 +172,15 @@ export default function Profile() {
   return (
     <>
       <style>{`
-        .prof-page{padding:var(--space-6);font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
+        .prof-page{padding:clamp(var(--space-4),4vw,var(--space-6));font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
 
         /* Hero */
         .prof-hero{display:flex;align-items:center;justify-content:space-between;gap:var(--space-6);padding:var(--space-6) var(--space-8);background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-xl);margin-bottom:var(--space-5);box-shadow:var(--shadow-sm);flex-wrap:wrap}
+        @media(max-width:480px){.prof-hero{padding:var(--space-5);flex-direction:column;align-items:stretch}.prof-hero>.btn{width:100%}}
         .prof-hero-left{display:flex;align-items:center;gap:var(--space-5)}
+        @media(max-width:480px){.prof-hero-left{gap:var(--space-4)}}
         .prof-avatar{width:80px;height:80px;border-radius:50%;background:var(--gradient-brand);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:white;flex-shrink:0;box-shadow:var(--shadow-brand-orange)}
+        @media(max-width:480px){.prof-avatar{width:60px;height:60px;font-size:20px}}
         .prof-name{font-size:var(--font-size-2xl);font-weight:700;color:var(--color-text);letter-spacing:-.02em;margin-bottom:3px}
         .prof-email{font-size:var(--font-size-sm);color:var(--color-text-muted);margin-bottom:var(--space-2)}
         .prof-badges{display:flex;gap:var(--space-2);flex-wrap:wrap}
@@ -197,6 +200,7 @@ export default function Profile() {
 
         /* Info grid */
         .prof-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3) var(--space-5)}
+        @media(max-width:420px){.prof-info-grid{grid-template-columns:1fr}}
         .prof-info-item{display:flex;flex-direction:column;gap:2px}
         .prof-info-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-faint)}
         .prof-info-value{font-size:var(--font-size-sm);font-weight:600;color:var(--color-text)}
@@ -249,6 +253,7 @@ export default function Profile() {
         .prof-modal-label{font-size:var(--font-size-sm);font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:var(--space-2)}
         .prof-modal-field{margin-bottom:var(--space-4)}
         .prof-modal-footer{display:flex;justify-content:flex-end;gap:var(--space-3);padding-top:var(--space-4);border-top:1px solid var(--color-border);margin-top:var(--space-4)}
+        @media(max-width:420px){.prof-modal-footer{flex-direction:column-reverse}.prof-modal-footer .btn{width:100%;justify-content:center}}
         .prof-alert{padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);font-size:var(--font-size-sm);font-weight:500;margin-bottom:var(--space-4)}
         .prof-alert.error{background:var(--color-danger-light);color:var(--color-danger)}
         .prof-alert.success{background:var(--color-success-light);color:var(--color-success)}

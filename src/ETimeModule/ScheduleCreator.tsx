@@ -164,7 +164,7 @@ function ScheduleCreator({ CompanyCode }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', padding: '10px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <h2 className="text-secondary-title">Schedules</h2>
         <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
           + New Schedule
@@ -289,8 +289,8 @@ function ScheduleCreator({ CompanyCode }: Props) {
               <label className="form-label">Schedule</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                 {timeSlots.map((slot, index) => (
-                  <div key={index} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-end' }}>
-                    <div className="form-group" style={{ flex: 1 }}>
+                  <div key={index} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div className="form-group" style={{ flex: '1 1 120px' }}>
                       <label className="form-label">Time In</label>
                       <input
                         className="form-input"
@@ -299,7 +299,7 @@ function ScheduleCreator({ CompanyCode }: Props) {
                         onChange={e => handleTimeSlotChange(index, 'timeIn', e.target.value)}
                       />
                     </div>
-                    <div className="form-group" style={{ flex: 1 }}>
+                    <div className="form-group" style={{ flex: '1 1 120px' }}>
                       <label className="form-label">Time Out</label>
                       <input
                         className="form-input"

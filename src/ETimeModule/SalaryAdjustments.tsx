@@ -244,7 +244,7 @@ export default function SalaryAdjustments() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  page: { padding: "var(--space-6)", fontFamily: "var(--font-base)", width: "100%", maxWidth: "100%", boxSizing: "border-box" },
+  page: { padding: "clamp(var(--space-4), 4vw, var(--space-6))", fontFamily: "var(--font-base)", width: "100%", maxWidth: "100%", boxSizing: "border-box" },
   empty: { padding: "var(--space-10)", textAlign: "center", color: "var(--color-text-muted)", fontSize: "var(--font-size-sm)" },
   nameCell: { display: "flex", alignItems: "center", gap: "var(--space-3)" },
   avatar: { width: 32, height: 32, borderRadius: "50%", background: "var(--gradient-brand)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 },

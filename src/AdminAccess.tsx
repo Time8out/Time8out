@@ -67,7 +67,7 @@ export default function AdminAccess() {
         .auth-page{min-height:100vh;display:flex;flex-direction:column;background:var(--color-bg);font-family:var(--font-base)}
         .auth-accent-bar{height:3px;background:var(--gradient-brand);width:100%;flex-shrink:0}
         .auth-header{background:var(--color-white);box-shadow:var(--shadow-md);flex-shrink:0}
-        .auth-header-inner{max-width:1200px;margin:0 auto;padding:0 var(--space-6);height:68px;display:flex;align-items:center;justify-content:space-between}
+        .auth-header-inner{max-width:1200px;margin:0 auto;padding:0 clamp(var(--space-4),4vw,var(--space-6));height:68px;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
         .auth-logo{display:flex;align-items:center;gap:var(--space-2);text-decoration:none}
         .auth-logo img{height:45px;width:auto}
         .auth-back{display:inline-flex;align-items:center;gap:var(--space-2);text-decoration:none;font-size:var(--font-size-sm);font-weight:500;color:var(--color-text-muted);transition:color var(--transition-fast)}

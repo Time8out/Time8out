@@ -355,30 +355,48 @@ export default function Overtime() {
   if (error) return <div style={s.page}><div className="alert alert-danger">{error}</div></div>;
 
   const otTypeDef = OT_TYPES.find(t => t.key === otType)!;
+  const pendingCount = overrides.filter(o => (o.Status ?? "pending") === "pending").length;
+  const approvedCount = overrides.filter(o => o.Status === "approved").length;
+  const totalOTHours = Math.round(overrides.reduce((sum, o) => sum + (o.OTHours || 0), 0) * 100) / 100;
 
   return (
     <>
       <style>{`
-        .ot-page{padding:var(--space-6);font-family:var(--font-base);width:100%;box-sizing:border-box}
+        .ot-page{padding:clamp(var(--space-4),3vw,var(--space-8));font-family:var(--font-base);width:100%;box-sizing:border-box}
+        .ot-header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-6)}
+        .ot-kicker{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+        .ot-kicker-dot{width:8px;height:8px;border-radius:50%;background:var(--gradient-brand);flex-shrink:0}
+        .ot-kicker-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)}
         .ot-title{font-size:var(--font-size-2xl);font-weight:700;color:var(--color-text);letter-spacing:-.02em;margin-bottom:4px}
-        .ot-sub{font-size:var(--font-size-sm);color:var(--color-text-muted);margin-bottom:var(--space-6)}
-        .ot-type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-3);margin-bottom:var(--space-5)}
+        .ot-sub{font-size:var(--font-size-sm);color:var(--color-text-muted)}
+        .ot-stats{display:flex;gap:var(--space-3);flex-wrap:wrap}
+        .ot-stat{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:10px 16px;box-shadow:var(--shadow-xs);text-align:center;min-width:76px;transition:box-shadow .15s,transform .15s}
+        .ot-stat:hover{box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+        .ot-stat-val{font-size:var(--font-size-lg);font-weight:700;color:var(--color-text);line-height:1.1}
+        .ot-stat-label{font-size:10px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+        .ot-section-title{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-faint);margin-bottom:var(--space-3)}
+        .ot-type-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,300px));gap:var(--space-3);margin-bottom:var(--space-5)}
         @media(max-width:480px){.ot-type-grid{grid-template-columns:1fr}}
-        .ot-type-card{padding:var(--space-4);border-radius:var(--radius-lg);border:1.5px solid var(--color-border);background:var(--color-white);cursor:pointer;transition:all .15s;text-align:left}
-        .ot-type-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
-        .ot-type-card.active{border-width:2px}
-        .ot-type-icon{font-size:22px;margin-bottom:var(--space-2)}
+        .ot-type-card{padding:var(--space-4);border-radius:var(--radius-lg);border:1.5px solid var(--color-border);background:var(--color-white);cursor:pointer;transition:all .18s cubic-bezier(.22,1,.36,1);text-align:left;position:relative;box-shadow:var(--shadow-xs)}
+        .ot-type-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+        .ot-type-card.active{border-width:2px;box-shadow:var(--shadow-sm)}
+        .ot-type-check{position:absolute;top:14px;right:14px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+        .ot-type-icon-badge{width:42px;height:42px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:var(--space-3)}
         .ot-type-label{font-size:var(--font-size-sm);font-weight:700;color:var(--color-text);margin-bottom:2px}
-        .ot-type-desc{font-size:10px;color:var(--color-text-muted);line-height:1.4}
-        .ot-subtype-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);margin-bottom:var(--space-4)}
-        .ot-subtype-card{padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);border:1.5px solid var(--color-border);background:var(--color-white);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:var(--space-2)}
-        .ot-subtype-card.active{border-color:#7c3aed;background:#f5f3ff}
-        .ot-subtype-icon{font-size:16px}
+        .ot-type-desc{font-size:11px;color:var(--color-text-muted);line-height:1.4}
+        .ot-subtype-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,260px));gap:var(--space-2);margin-bottom:var(--space-4)}
+        .ot-subtype-card{padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);border:1.5px solid var(--color-border);background:var(--color-white);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:var(--space-3)}
+        .ot-subtype-card:hover{border-color:#c4b5fd}
+        .ot-subtype-card.active{border-color:#7c3aed;background:#f5f3ff;box-shadow:var(--shadow-xs)}
+        .ot-subtype-icon{width:30px;height:30px;border-radius:50%;background:var(--color-bg-alt);display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:background .15s}
+        .ot-subtype-card.active .ot-subtype-icon{background:#ede9fe}
         .ot-subtype-label{font-size:var(--font-size-sm);font-weight:700;color:var(--color-text)}
         .ot-subtype-desc{font-size:10px;color:var(--color-text-muted)}
-        .ot-form-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-6);box-shadow:var(--shadow-xs)}
+        .ot-form-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-6);box-shadow:var(--shadow-xs);transition:box-shadow .2s}
+        .ot-form-card:hover{box-shadow:var(--shadow-sm)}
         .ot-form-band{height:4px}
         .ot-form-body{padding:var(--space-5)}
+        .ot-form-title{font-size:var(--font-size-base);font-weight:700;color:var(--color-text);margin-bottom:var(--space-4);display:flex;align-items:center;gap:8px}
         .ot-label{font-size:var(--font-size-sm);font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:var(--space-2)}
         .ot-field{margin-bottom:var(--space-4)}
         .ot-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-4)}
@@ -408,13 +426,17 @@ export default function Overtime() {
         .ot-history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)}
         .ot-history-title{font-size:var(--font-size-sm);font-weight:700;color:var(--color-text)}
         .ot-count{font-size:11px;font-weight:700;background:var(--color-bg-alt);border:1px solid var(--color-border);border-radius:99px;padding:1px 8px;color:var(--color-text-muted)}
-        .ot-empty{background:var(--color-bg-alt);border:1px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);text-align:center;font-size:var(--font-size-sm);color:var(--color-text-faint);font-style:italic}
-        .ot-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-2);display:flex;align-items:flex-start;gap:var(--space-3)}
-        .ot-card-icon{width:34px;height:34px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+        .ot-empty{background:var(--color-bg-alt);border:1px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-6) var(--space-4);text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--color-text-faint)}
+        .ot-empty-icon{font-size:26px;opacity:.6}
+        .ot-empty-text{font-size:var(--font-size-sm);font-style:italic}
+        .ot-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-2);display:flex;align-items:flex-start;gap:var(--space-3);box-shadow:var(--shadow-xs);transition:box-shadow .15s,transform .15s}
+        .ot-card:hover{box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+        .ot-card-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
         .ot-card-info{flex:1;min-width:0}
         .ot-card-date{font-size:var(--font-size-sm);font-weight:700;color:var(--color-text);margin-bottom:2px}
         .ot-card-shift{font-size:var(--font-size-xs);color:var(--color-text-muted);font-family:monospace}
         .ot-card-meta{font-size:10px;color:var(--color-text-faint);margin-top:2px}
+        .ot-status-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;border:1px solid}
         .ot-delete-btn{padding:4px 10px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:transparent;font-size:11px;font-weight:700;color:var(--color-text-muted);cursor:pointer;font-family:var(--font-base);transition:all .15s;white-space:nowrap;flex-shrink:0}
         .ot-delete-btn:hover{background:rgba(239,68,68,0.07);color:#dc2626;border-color:rgba(239,68,68,0.3)}
         .ot-confirm-row{display:flex;align-items:center;gap:6px;flex-shrink:0}
@@ -444,15 +466,40 @@ export default function Overtime() {
       `}</style>
 
       <div className="ot-page">
-        <h1 className="ot-title">Overtime</h1>
-        <p className="ot-sub">File your overtime schedule for a specific date.</p>
+        <div className="ot-header">
+          <div>
+            <div className="ot-kicker">
+              <span className="ot-kicker-dot" />
+              <span className="ot-kicker-label">Time &amp; Attendance</span>
+            </div>
+            <h1 className="ot-title">Overtime</h1>
+            <p className="ot-sub">File your overtime schedule for a specific date.</p>
+          </div>
 
+          <div className="ot-stats">
+            <div className="ot-stat">
+              <div className="ot-stat-val">{pendingCount}</div>
+              <div className="ot-stat-label">Pending</div>
+            </div>
+            <div className="ot-stat">
+              <div className="ot-stat-val">{approvedCount}</div>
+              <div className="ot-stat-label">Approved</div>
+            </div>
+            <div className="ot-stat">
+              <div className="ot-stat-val">{totalOTHours}h</div>
+              <div className="ot-stat-label">Total OT</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="ot-section-title">Choose OT Type</div>
         <div className="ot-type-grid">
           {OT_TYPES.map(t => (
             <div key={t.key} className={`ot-type-card${otType === t.key ? " active" : ""}`}
               style={otType === t.key ? { borderColor: t.color, background: t.bg } : {}}
               onClick={() => { setOtType(t.key); setOtSubType("pre_shift"); setOtStart(""); setOtEnd(""); setMsg(null); setAvailableShifts([]); setSelectedShiftIndex(0); setSelectedBreakIDs([""]); setRestDaySlots([{ timeIn: "", timeOut: "" }]); }}>
-              <div className="ot-type-icon">{t.icon}</div>
+              {otType === t.key && <span className="ot-type-check" style={{ background: t.color }}>✓</span>}
+              <div className="ot-type-icon-badge" style={{ background: t.bg, color: t.color }}>{t.icon}</div>
               <div className="ot-type-label" style={otType === t.key ? { color: t.color } : {}}>{t.label}</div>
               <div className="ot-type-desc">{t.desc}</div>
             </div>
@@ -462,6 +509,7 @@ export default function Overtime() {
         <div className="ot-form-card">
           <div className="ot-form-band" style={{ background: otTypeDef.color }} />
           <div className="ot-form-body">
+            <div className="ot-form-title">📝 Overtime Details</div>
 
             <div className="ot-field">
               <label className="ot-label">Date *</label>
@@ -630,13 +678,14 @@ export default function Overtime() {
             {conflict && <div className={`ot-alert ${conflict.type}`}>{conflict.message}</div>}
             {msg && <div className={`ot-alert ${msg.type}`}>{msg.text}</div>}
 
-            <button className="btn btn-primary" onClick={handleSubmit}
-              disabled={submitting || !date || conflict?.type === "conflict" ||
-                (otType === "PartTimeOT" && (!otStart || !otEnd || otHours <= 0)) ||
-                (otType === "RestDayOT" && restDayTotalHours <= 0)}
-              style={{ width: "100%" }}>
-              {submitting ? "Saving…" : "Save OT Schedule"}
-            </button>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button className="btn btn-primary" onClick={handleSubmit}
+                disabled={submitting || !date || conflict?.type === "conflict" ||
+                  (otType === "PartTimeOT" && (!otStart || !otEnd || otHours <= 0)) ||
+                  (otType === "RestDayOT" && restDayTotalHours <= 0)}>
+                {submitting ? "Saving…" : "Save OT Schedule"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -648,7 +697,10 @@ export default function Overtime() {
         </div>
 
         {overrides.length === 0 ? (
-          <div className="ot-empty">No OT schedules filed yet.</div>
+          <div className="ot-empty">
+            <span className="ot-empty-icon">🕒</span>
+            <span className="ot-empty-text">No OT schedules filed yet.</span>
+          </div>
         ) : overrides.map(o => {
           const slots = typeof o.Schedules === "string" ? JSON.parse(o.Schedules) : (o.Schedules ?? []);
           const typeDef = OT_TYPES.find(t => t.key === o.ScheduleType) ?? OT_TYPES[0];
@@ -672,7 +724,7 @@ export default function Overtime() {
                 )}
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-                <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 9px", borderRadius: 99, fontSize: 11, fontWeight: 700, background: statusStyle?.bg, color: statusStyle?.color, border: `1px solid ${statusStyle?.border}` }}>
+                <span className="ot-status-badge" style={{ background: statusStyle?.bg, color: statusStyle?.color, borderColor: statusStyle?.border }}>
                   {statusStyle?.label}
                 </span>
                 {statusKey === "pending" && (
@@ -696,5 +748,5 @@ export default function Overtime() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  page: { padding: "var(--space-6)", fontFamily: "var(--font-base)", width: "100%", maxWidth: 680, boxSizing: "border-box" },
+  page: { padding: "var(--space-6)", fontFamily: "var(--font-base)", width: "100%", boxSizing: "border-box" },
 };

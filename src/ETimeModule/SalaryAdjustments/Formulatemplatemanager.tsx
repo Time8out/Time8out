@@ -134,7 +134,7 @@ export default function FormulaTemplateManager() {
   return (
     <>
       <style>{`
-        .ftm-page{padding:var(--space-6);font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
+        .ftm-page{padding:clamp(var(--space-4),4vw,var(--space-6));font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
         .ftm-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:var(--space-6);gap:var(--space-4);flex-wrap:wrap}
         .ftm-title{font-size:var(--font-size-2xl);font-weight:700;color:var(--color-text);letter-spacing:-.02em;margin-bottom:4px}
         .ftm-sub{font-size:var(--font-size-sm);color:var(--color-text-muted)}

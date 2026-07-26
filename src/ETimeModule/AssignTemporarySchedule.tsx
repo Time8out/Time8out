@@ -290,7 +290,7 @@ function AssignTemporarySchedule({ Email, CompanyCode }: Props) {
         {/* Shift Schedule */}
         <div className="form-group">
           <label className="form-label">Shift Schedule</label>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
             <select className="form-select" value={selectedScheduleID}
               onChange={e => setSelectedScheduleID(e.target.value)} style={{ flex: 1 }}>
               <option value="">Select a schedule</option>
@@ -323,7 +323,7 @@ function AssignTemporarySchedule({ Email, CompanyCode }: Props) {
               const selectedBreak = breaks.find(b => String(b.id) === String(breakID))
               return (
                 <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
                     <select className="form-select" value={breakID}
                       onChange={e => handleBreakChange(index, e.target.value)} style={{ flex: 1 }}>
                       <option value="">Select a break</option>

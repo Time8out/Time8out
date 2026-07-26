@@ -128,9 +128,10 @@ export default function OverTimeApproval() {
   return (
     <>
       <style>{`
-        .ota-page{padding:var(--space-6);font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
+        .ota-page{padding:clamp(var(--space-4),4vw,var(--space-6));font-family:var(--font-base);width:100%;max-width:100%;box-sizing:border-box}
         .ota-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:var(--space-6);gap:var(--space-4);flex-wrap:wrap}
         .ota-title{font-size:var(--font-size-2xl);font-weight:700;color:var(--color-text);letter-spacing:-.02em;margin-bottom:4px}
+        @media(max-width:480px){.ota-title{font-size:var(--font-size-xl)}}
         .ota-sub{font-size:var(--font-size-sm);color:var(--color-text-muted)}
 
         .ota-stats{display:flex;gap:var(--space-3);margin-bottom:var(--space-5);flex-wrap:wrap}
@@ -145,14 +146,15 @@ export default function OverTimeApproval() {
 
         .ota-empty{background:var(--color-bg-alt);border:1px dashed var(--color-border);border-radius:var(--radius-lg);padding:var(--space-8);text-align:center;font-size:var(--font-size-sm);color:var(--color-text-faint);font-style:italic}
 
-        .ota-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-3);transition:box-shadow .15s}
-        .ota-card:hover{box-shadow:var(--shadow-sm)}
-        .ota-card-top{display:flex;align-items:flex-start;gap:var(--space-3);margin-bottom:var(--space-3)}
+        .ota-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-3);transition:box-shadow .15s,transform .15s}
+        .ota-card:hover{box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+        @media(max-width:480px){.ota-card{padding:var(--space-3)}}
+        .ota-card-top{display:flex;align-items:flex-start;gap:var(--space-3);margin-bottom:var(--space-3);flex-wrap:wrap}
         .ota-card-icon{width:40px;height:40px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-        .ota-card-info{flex:1;min-width:0}
+        .ota-card-info{flex:1;min-width:160px}
         .ota-card-name{font-size:var(--font-size-sm);font-weight:700;color:var(--color-text);margin-bottom:2px}
         .ota-card-date{font-size:var(--font-size-xs);color:var(--color-text-muted)}
-        .ota-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+        .ota-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:auto}
         .ota-status-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;border:1px solid}
         .ota-card-hours{font-size:12px;font-weight:700;color:var(--color-text-muted);font-family:monospace}
 
@@ -169,6 +171,7 @@ export default function OverTimeApproval() {
         .ota-admin-note{font-size:var(--font-size-xs);color:var(--color-text-muted);font-style:italic;padding:var(--space-2) var(--space-3);background:var(--color-bg-alt);border-radius:var(--radius-md);margin-bottom:var(--space-3)}
 
         .ota-actions{display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap}
+        @media(max-width:480px){.ota-actions{flex-direction:column;align-items:stretch}.ota-actions button{width:100%}}
         .ota-review-btn{padding:7px 16px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-white);font-size:var(--font-size-xs);font-weight:700;cursor:pointer;font-family:var(--font-base);color:var(--color-text-secondary);transition:all .15s}
         .ota-review-btn:hover{border-color:var(--brand-orange);color:var(--brand-orange)}
         .ota-approve-btn{padding:7px 16px;border-radius:var(--radius-md);border:none;background:var(--color-success);color:white;font-size:var(--font-size-xs);font-weight:700;cursor:pointer;font-family:var(--font-base);transition:opacity .15s}
