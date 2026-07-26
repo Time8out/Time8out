@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { supabase } from '../../utils/supabase';
 import ScannedProfile from './ScannedProfile';
+import ScannerErrorBoundary from './ScannerErrorBoundary';
 import { useIsMobile } from './useIsMobile';
 import { handleScan } from './ScannerLogic';
 import type { StampResult } from './inputLiveStamp';
@@ -14,10 +15,35 @@ const BARCODE_FORMATS: ScanFormat[] = [
   'CODE_128', 'EAN_13', 'EAN_8', 'UPC_A', 'UPC_E', 'CODE_39', 'ITF', 'CODABAR',
 ];
 
+function BarcodeIcon({ flash }: { flash: boolean }) {
+  return (
+    <div style={{ color: flash ? '#e9520e' : '#9ca3af', transition: 'color 0.15s' }}>
+      <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+        <rect x="4"  y="10" width="4"  height="28" rx="1.5" fill="currentColor"/>
+        <rect x="11" y="10" width="2"  height="28" rx="1"   fill="currentColor" opacity=".7"/>
+        <rect x="16" y="10" width="5"  height="28" rx="1.5" fill="currentColor"/>
+        <rect x="24" y="10" width="2"  height="28" rx="1"   fill="currentColor" opacity=".7"/>
+        <rect x="29" y="10" width="4"  height="28" rx="1.5" fill="currentColor"/>
+        <rect x="36" y="10" width="2"  height="28" rx="1"   fill="currentColor" opacity=".7"/>
+        <rect x="41" y="10" width="3"  height="28" rx="1.5" fill="currentColor"/>
+        <rect x="2"  y="23" width="44" height="2"  rx="1"   fill="url(#sl)" opacity=".9"/>
+        <defs>
+          <linearGradient id="sl" x1="2" y1="24" x2="46" y2="24" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#e9520e" stopOpacity="0"/>
+            <stop offset=".5" stopColor="#e9520e"/>
+            <stop offset="1" stopColor="#e9520e" stopOpacity="0"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  );
+}
+
 type AuthState = 'idle' | 'verifying' | 'granted' | 'denied';
 
 function BarcodeScanner() {
   const isMobile = useIsMobile();
+  const [cameraKey, setCameraKey] = useState(0);
 
   // ── Auth state ──────────────────────────────────────────
   const [authState, setAuthState] = useState<AuthState>('idle');
@@ -93,7 +119,13 @@ function BarcodeScanner() {
     setFlash(true);
     setTimeout(() => setFlash(false), 600);
 
-    const result = await handleScan(value, companyCode);
+    let result: StampResult;
+    try {
+      result = await handleScan(value, companyCode);
+    } catch (err) {
+      console.error('[BarcodeScanner] handleScan threw:', err);
+      result = { success: false, message: 'Something went wrong processing that scan. Please try again.' };
+    }
     setStampResult(result);
 
     closeTimerRef.current = setTimeout(() => {
@@ -374,38 +406,33 @@ function BarcodeScanner() {
           boxShadow: flash ? '0 0 0 4px rgba(233,82,14,0.12)' : '0 2px 8px rgba(0,0,0,0.06)',
         }}>
           {isMobile ? (
-            <Suspense fallback={<div style={{ width: 120, height: 120 }} />}>
-              <CameraScanner
-                formats={BARCODE_FORMATS}
-                accentColor={flash ? '#e9520e' : '#9ca3af'}
-                paused={showModal}
-                onDecode={handleCameraDecode}
-              />
-            </Suspense>
+            <ScannerErrorBoundary
+              resetKey={cameraKey}
+              fallback={
+                <div
+                  onClick={() => setCameraKey(k => k + 1)}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                  title="Tap to retry the camera"
+                >
+                  <BarcodeIcon flash={false} />
+                  <p style={{ fontSize: 12, color: '#dc2626', margin: 0, textAlign: 'center', fontWeight: 600 }}>
+                    Camera view crashed — tap to retry
+                  </p>
+                </div>
+              }
+            >
+              <Suspense fallback={<div style={{ width: 120, height: 120 }} />}>
+                <CameraScanner
+                  key={cameraKey}
+                  formats={BARCODE_FORMATS}
+                  accentColor={flash ? '#e9520e' : '#9ca3af'}
+                  paused={showModal}
+                  onDecode={handleCameraDecode}
+                />
+              </Suspense>
+            </ScannerErrorBoundary>
           ) : (
-            /* Barcode icon */
-            <div style={{
-              color: flash ? '#e9520e' : '#9ca3af',
-              transition: 'color 0.15s',
-            }}>
-              <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
-                <rect x="4"  y="10" width="4"  height="28" rx="1.5" fill="currentColor"/>
-                <rect x="11" y="10" width="2"  height="28" rx="1"   fill="currentColor" opacity=".7"/>
-                <rect x="16" y="10" width="5"  height="28" rx="1.5" fill="currentColor"/>
-                <rect x="24" y="10" width="2"  height="28" rx="1"   fill="currentColor" opacity=".7"/>
-                <rect x="29" y="10" width="4"  height="28" rx="1.5" fill="currentColor"/>
-                <rect x="36" y="10" width="2"  height="28" rx="1"   fill="currentColor" opacity=".7"/>
-                <rect x="41" y="10" width="3"  height="28" rx="1.5" fill="currentColor"/>
-                <rect x="2"  y="23" width="44" height="2"  rx="1"   fill="url(#sl)" opacity=".9"/>
-                <defs>
-                  <linearGradient id="sl" x1="2" y1="24" x2="46" y2="24" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#e9520e" stopOpacity="0"/>
-                    <stop offset=".5" stopColor="#e9520e"/>
-                    <stop offset="1" stopColor="#e9520e" stopOpacity="0"/>
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
+            <BarcodeIcon flash={flash} />
           )}
 
           <p style={{ fontSize: 15, color: '#6b7280', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>

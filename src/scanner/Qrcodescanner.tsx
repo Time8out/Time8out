@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { supabase } from '../../utils/supabase';
 import ScannedProfile from './ScannedProfile';
+import ScannerErrorBoundary from './ScannerErrorBoundary';
 import { useIsMobile } from './useIsMobile';
 import { handleScan } from './ScannerLogic';
 import type { StampResult } from './inputLiveStamp';
@@ -12,10 +13,38 @@ const CameraScanner = lazy(() => import('./CameraScanner'));
 
 const QR_FORMATS: ScanFormat[] = ['QR_CODE'];
 
+function ScanIcon({ flash }: { flash: boolean }) {
+  return (
+    <div style={{ width: 120, height: 120, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {[
+        { top: 0, left: 0, borderTop: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderLeft: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
+        { top: 0, right: 0, borderTop: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderRight: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
+        { bottom: 0, left: 0, borderBottom: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderLeft: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
+        { bottom: 0, right: 0, borderBottom: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderRight: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
+      ].map((style, i) => (
+        <div key={i} style={{ position: 'absolute', width: 20, height: 20, borderRadius: 2, transition: 'all 0.15s', ...style as React.CSSProperties }}/>
+      ))}
+      <svg width="64" height="64" viewBox="0 0 48 48" fill="none" style={{ color: flash ? '#0ea5e9' : '#9ca3af', transition: 'color 0.15s' }}>
+        <rect x="4"  y="4"  width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
+        <rect x="9"  y="9"  width="6"  height="6"  rx="1"   fill="currentColor"/>
+        <rect x="28" y="4"  width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
+        <rect x="33" y="9"  width="6"  height="6"  rx="1"   fill="currentColor"/>
+        <rect x="4"  y="28" width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
+        <rect x="9"  y="33" width="6"  height="6"  rx="1"   fill="currentColor"/>
+        <rect x="28" y="28" width="5"  height="5"  rx="1"   fill="currentColor"/>
+        <rect x="35" y="28" width="5"  height="5"  rx="1"   fill="currentColor" opacity=".6"/>
+        <rect x="28" y="35" width="5"  height="5"  rx="1"   fill="currentColor" opacity=".6"/>
+        <rect x="35" y="35" width="5"  height="5"  rx="1"   fill="currentColor"/>
+      </svg>
+    </div>
+  );
+}
+
 type AuthState = 'idle' | 'verifying' | 'granted' | 'denied';
 
 function QRcodeScanner() {
   const isMobile = useIsMobile();
+  const [cameraKey, setCameraKey] = useState(0);
 
   // ── Auth state ──────────────────────────────────────────
   const [authState, setAuthState] = useState<AuthState>('idle');
@@ -91,7 +120,13 @@ function QRcodeScanner() {
     setFlash(true);
     setTimeout(() => setFlash(false), 600);
 
-    const result = await handleScan(value, companyCode);
+    let result: StampResult;
+    try {
+      result = await handleScan(value, companyCode);
+    } catch (err) {
+      console.error('[QRcodeScanner] handleScan threw:', err);
+      result = { success: false, message: 'Something went wrong processing that scan. Please try again.' };
+    }
     setStampResult(result);
 
     closeTimerRef.current = setTimeout(() => {
@@ -371,37 +406,33 @@ function QRcodeScanner() {
           boxShadow: flash ? '0 0 0 4px rgba(14,165,233,0.12)' : '0 2px 8px rgba(0,0,0,0.06)',
         }}>
           {isMobile ? (
-            <Suspense fallback={<div style={{ width: 120, height: 120 }} />}>
-              <CameraScanner
-                formats={QR_FORMATS}
-                accentColor={flash ? '#0ea5e9' : '#9ca3af'}
-                paused={showModal}
-                onDecode={handleCameraDecode}
-              />
-            </Suspense>
+            <ScannerErrorBoundary
+              resetKey={cameraKey}
+              fallback={
+                <div
+                  onClick={() => setCameraKey(k => k + 1)}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                  title="Tap to retry the camera"
+                >
+                  <ScanIcon flash={false} />
+                  <p style={{ fontSize: 12, color: '#dc2626', margin: 0, textAlign: 'center', fontWeight: 600 }}>
+                    Camera view crashed — tap to retry
+                  </p>
+                </div>
+              }
+            >
+              <Suspense fallback={<div style={{ width: 120, height: 120 }} />}>
+                <CameraScanner
+                  key={cameraKey}
+                  formats={QR_FORMATS}
+                  accentColor={flash ? '#0ea5e9' : '#9ca3af'}
+                  paused={showModal}
+                  onDecode={handleCameraDecode}
+                />
+              </Suspense>
+            </ScannerErrorBoundary>
           ) : (
-            <div style={{ width: 120, height: 120, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {[
-                { top: 0, left: 0, borderTop: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderLeft: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
-                { top: 0, right: 0, borderTop: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderRight: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
-                { bottom: 0, left: 0, borderBottom: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderLeft: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
-                { bottom: 0, right: 0, borderBottom: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderRight: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
-              ].map((style, i) => (
-                <div key={i} style={{ position: 'absolute', width: 20, height: 20, borderRadius: 2, transition: 'all 0.15s', ...style as React.CSSProperties }}/>
-              ))}
-              <svg width="64" height="64" viewBox="0 0 48 48" fill="none" style={{ color: flash ? '#0ea5e9' : '#9ca3af', transition: 'color 0.15s' }}>
-                <rect x="4"  y="4"  width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
-                <rect x="9"  y="9"  width="6"  height="6"  rx="1"   fill="currentColor"/>
-                <rect x="28" y="4"  width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
-                <rect x="33" y="9"  width="6"  height="6"  rx="1"   fill="currentColor"/>
-                <rect x="4"  y="28" width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
-                <rect x="9"  y="33" width="6"  height="6"  rx="1"   fill="currentColor"/>
-                <rect x="28" y="28" width="5"  height="5"  rx="1"   fill="currentColor"/>
-                <rect x="35" y="28" width="5"  height="5"  rx="1"   fill="currentColor" opacity=".6"/>
-                <rect x="28" y="35" width="5"  height="5"  rx="1"   fill="currentColor" opacity=".6"/>
-                <rect x="35" y="35" width="5"  height="5"  rx="1"   fill="currentColor"/>
-              </svg>
-            </div>
+            <ScanIcon flash={flash} />
           )}
 
           <p style={{ fontSize: 15, color: '#6b7280', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
