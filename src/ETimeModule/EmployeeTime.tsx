@@ -279,11 +279,22 @@ export default function EmployeeTime() {
         .et-break-label{font-size:10px;color:var(--color-text-faint);text-transform:uppercase;letter-spacing:.05em}
 
         /* Total hours footer */
-        .et-total-bar{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-5);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3);box-shadow:var(--shadow-xs);transition:border-color .15s,box-shadow .15s}
+        .et-total-bar{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-5);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);box-shadow:var(--shadow-xs);transition:border-color .15s,box-shadow .15s}
         .et-total-bar:hover{border-color:var(--color-border-secondary);box-shadow:var(--shadow-sm)}
         .et-total-label{font-size:var(--font-size-sm);font-weight:600;color:var(--color-text-muted)}
         .et-total-value{font-size:var(--font-size-xl);font-weight:700;color:var(--color-text)}
-        .et-total-sub{font-size:var(--font-size-xs);color:var(--color-text-muted);margin-top:2px}
+        .et-total-sub{font-size:var(--font-size-xs);color:var(--color-text-muted)}
+        .et-total-left{min-width:0}
+        .et-total-left .et-total-sub{margin-top:2px}
+        .et-total-right{display:flex;align-items:center;gap:var(--space-4);flex-shrink:0}
+        .et-total-right-text{text-align:right}
+        .et-total-right-text .et-total-sub{margin-top:2px;white-space:nowrap}
+        .et-total-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-md);background:var(--color-bg-alt);border:1px solid var(--color-border);flex-shrink:0}
+        @media(max-width:560px){
+          .et-total-bar{flex-direction:column;align-items:stretch}
+          .et-total-right{width:100%;justify-content:space-between}
+          .et-total-right-text .et-total-sub{white-space:normal}
+        }
 
         .et-empty{padding:var(--space-12);text-align:center;color:var(--color-text-muted);font-size:var(--font-size-sm)}
         .et-alert{padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);font-size:var(--font-size-sm);font-weight:500;margin-bottom:var(--space-4);background:var(--color-danger-light);color:var(--color-danger)}
@@ -506,16 +517,16 @@ export default function EmployeeTime() {
                 style={{ cursor: "pointer" }}
                 title="Click to view payslip"
               >
-                <div>
+                <div className="et-total-left">
                   <div className="et-total-label">Total working hours</div>
                   <div className="et-total-sub">{dateFrom} → {dateTo} · {totalDays} day{totalDays !== 1 ? "s" : ""}</div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
-                  <div style={{ textAlign: "right" }}>
+                <div className="et-total-right">
+                  <div className="et-total-right-text">
                     <div className="et-total-value">{formatHours(totalHours)}</div>
                     <div className="et-total-sub">{presentDays} present · {absentDays} absent · {formatMinutes(totalDeduction)} deducted</div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "var(--radius-md)", background: "var(--color-bg-alt)", border: "1px solid var(--color-border)", flexShrink: 0 }}>
+                  <div className="et-total-icon">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
                     </svg>
