@@ -312,10 +312,25 @@ export default function Overtime() {
       const existingSlots: ShiftSlot[] = typeof existingRow.Schedules === "string"
         ? JSON.parse(existingRow.Schedules) : (existingRow.Schedules ?? []);
 
-      // Keep slots separate — just append the new OT slot
-      const finalSlots = [...existingSlots, ...scheduleSlots];
+      // Skip any slot that exactly duplicates an already-filed OT window for
+      // this date (e.g. an accidental resubmission) — appending it again would
+      // create a second stampable shift for the same time, letting one scan
+      // get logged as late/OT twice.
+      const newSlots = scheduleSlots.filter(s =>
+        !existingSlots.some(e => e.timeIn === s.timeIn && e.timeOut === s.timeOut)
+      );
+
+      if (newSlots.length === 0) {
+        setMsg({ type: "error", text: "This OT window has already been filed for this date." });
+        setSubmitting(false);
+        return;
+      }
+
+      // Keep slots separate — just append the new (non-duplicate) OT slot(s)
+      const finalSlots = [...existingSlots, ...newSlots];
       // OTHours = sum of actual OT durations only, not the merged window
-      const finalOTHoursTotal = Math.round(((existingRow.OTHours ?? 0) + finalOTHours) * 100) / 100;
+      const newSlotsHours = newSlots.reduce((sum, s) => sum + diffHours(s.timeIn, s.timeOut), 0);
+      const finalOTHoursTotal = Math.round(((existingRow.OTHours ?? 0) + newSlotsHours) * 100) / 100;
 
       const { error: e } = await supabase.from("Overtime").update({
         Schedules: JSON.stringify(finalSlots),
