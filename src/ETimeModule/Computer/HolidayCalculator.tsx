@@ -1,5 +1,11 @@
 // HolidayCalculator.tsx
-// Called when the employee's last stamp falls on a holiday date.
+// Called for holiday working days. Computes Holiday pay and Overtime only —
+// regular (non-holiday) days are handled entirely by RegularScheduleComputer.tsx.
+//
+// Kept in lockstep with RegularScheduleComputer.tsx and the live SQL function
+// public.compute_attendance_pay() — same span-adjustment logic, same Expected
+// Salary calculation, same StampsFeedback peso enrichment. If you change one,
+// change the others.
 
 import { supabase } from '../../../utils/supabase';
 
@@ -27,6 +33,14 @@ interface ShiftEntry {
   }[];
 }
 
+interface StampFeedbackEntry {
+  type: string;
+  actualTime?: string;
+  scheduledTime?: string;
+  deductionMinutes: number;
+  deductionAmount?: number;
+}
+
 function timeToMinutes(t: string): number {
   if (!t) return 0;
   const [h, m] = t.split(':').map(Number);
@@ -46,12 +60,30 @@ function scheduledMinutes(shift: ShiftEntry): number {
   return outMin - inMin;
 }
 
+// Which deduction types are ALREADY reflected in the ActualTimeIn/ActualTimeOut
+// gap, and therefore must NOT also be subtracted separately:
+// - 'late'     → ActualTimeIn is literally the late clock-in time, so the
+//                actual-out minus actual-in gap is already shorter.
+// - 'earlyout' → ActualTimeOut is literally the early clock-out time, same reason.
+// Everything else (overbreak, system_auto_logout, system_auto_breakout, missed)
+// does NOT touch ActualTimeIn/ActualTimeOut directly (a mid-shift overbreak
+// doesn't change the shift's start/end; an auto-logout buffer pads
+// ActualTimeOut later than truly worked) — those still need to be subtracted.
+const SPAN_REFLECTED_TYPES = new Set(['late', 'earlyout']);
+
+function computeSpanAdjustmentMinutes(feedback: StampFeedbackEntry[]): number {
+  return feedback.reduce((sum, f) => {
+    if (SPAN_REFLECTED_TYPES.has(f.type)) return sum;
+    return sum + (f.deductionMinutes ?? 0);
+  }, 0);
+}
+
 // Compute actual worked minutes considering:
 // - Cap at scheduled hours (don't over-calculate)
-// - Apply TimeDeduction
+// - Apply only the deductions NOT already reflected in Actual clock times
 function computeWorkedMinutes(
   schedule: ShiftEntry[],
-  totalDeductionMins: number
+  spanAdjustmentMins: number
 ): number {
   let totalScheduledMins = 0;
   let totalActualMins = 0;
@@ -79,8 +111,11 @@ function computeWorkedMinutes(
     totalActualMins += workedMins;
   }
 
-  // Apply deductions
-  const deductedMins = Math.max(0, totalActualMins - totalDeductionMins);
+  // Apply only the deductions not already baked into the actual clock gap
+  // (overbreak, auto-logout/auto-breakout padding, missed shifts) —
+  // late/earlyout are NOT subtracted again here, since they already
+  // shortened the gap above.
+  const deductedMins = Math.max(0, totalActualMins - spanAdjustmentMins);
 
   // Final cap at total scheduled hours
   return Math.min(deductedMins, totalScheduledMins);
@@ -141,7 +176,11 @@ export async function HolidayCalculator({
     ? JSON.parse(attendance.ScheduleTimeAndAttendance)
     : (attendance.ScheduleTimeAndAttendance ?? []);
 
-  const timeDeduction: number = attendance.TimeDeduction ?? 0;
+  const stampsFeedback: StampFeedbackEntry[] = typeof attendance.StampsFeedback === 'string'
+    ? (attendance.StampsFeedback ? JSON.parse(attendance.StampsFeedback) : [])
+    : (attendance.StampsFeedback ?? []);
+
+  const spanAdjustmentMins = computeSpanAdjustmentMinutes(stampsFeedback);
 
   if (schedule.length === 0) {
     console.log('[HolidayCalculator] No schedule data — skipping.');
@@ -180,23 +219,26 @@ export async function HolidayCalculator({
   console.log('[HolidayCalculator] Scheduled hours per day:', scheduledHoursPerDay);
 
   // ── Step 4: Compute actual worked minutes ─────────────
-  const workedMins = computeWorkedMinutes(schedule, timeDeduction);
+  const workedMins = computeWorkedMinutes(schedule, spanAdjustmentMins);
   const workedHours = workedMins / 60;
 
   console.log('[HolidayCalculator] Worked hours (after deduction, capped):', workedHours);
 
-  if (workedHours <= 0) {
-    console.log('[HolidayCalculator] No hours worked — Holiday pay = 0.');
-    await supabase.from('Attendance').update({ Holiday: 0, Overtime: 0 })
-      .eq('EmployeeID', EmployeeID).eq('CompanyCode', companyCode).eq('AttendanceDate', attendanceDate);
-    return;
-  }
-
   // ── Step 5: Get hourly rate ────────────────────────────
+  // (computed before the zero-hours check — needed to price StampsFeedback
+  // entries and compute Expected Salary even on a fully-missed day)
   const hourlyRate = getHourlyRate(ps, scheduledHoursPerDay);
   console.log('[HolidayCalculator] Hourly rate:', hourlyRate);
 
+  // ── Enrich StampsFeedback with a peso deductionAmount per entry ──
+  const enrichedFeedback: StampFeedbackEntry[] = stampsFeedback.map(f => ({
+    ...f,
+    deductionAmount: Math.round(hourlyRate * ((f.deductionMinutes ?? 0) / 60) * 100) / 100,
+  }));
+
   // ── Step 6: Check for OT on this date ────────────────
+  // (moved before the zero-hours check — OT is pre-approved and doesn't
+  //  depend on whether the employee actually clocked in today)
   const { data: otRow } = await supabase
     .from('Overtime')
     .select('OTHours, ScheduleType, Schedules')
@@ -213,7 +255,7 @@ export async function HolidayCalculator({
 
   console.log('[HolidayCalculator] OT found:', hasOT, '| OTHours:', otHours, '| RestDayOT:', isRestDayOT, '| PartTimeOT:', isPartTimeOT);
 
-  // ── Step 7: Apply holiday + OT rates ─────────────────
+  // ── Apply holiday + OT rates ─────────────────────────
   const holidayRate = isRegularHoliday
     ? parsePercent(ps.RegularHolidayOT)
     : parsePercent(ps.SpecialHolidayOT);
@@ -221,6 +263,81 @@ export async function HolidayCalculator({
   const partTimeOTRate = parsePercent(ps.PartTimeOT);
   const restDayOTRate  = parsePercent(ps.RestDayOT);
 
+  // ── Expected Salary: what pay WOULD be with zero lateness/deductions ──
+  // Same formula shape as the actual pay below, but using the full
+  // scheduled hours instead of workedHours (which has deductions baked in).
+  let expectedHolidayPay = 0;
+  let expectedOvertimePay = 0;
+
+  if (isRestDayOT) {
+    expectedHolidayPay = Math.round(hourlyRate * scheduledHoursPerDay * (1 + holidayRate) * 100) / 100;
+    expectedOvertimePay = Math.round(hourlyRate * scheduledHoursPerDay * restDayOTRate * 100) / 100;
+  } else if (isPartTimeOT) {
+    const expectedRegularHours = Math.max(0, scheduledHoursPerDay - otHours);
+    const expectedOtWorkedHours = Math.min(otHours, scheduledHoursPerDay);
+    expectedHolidayPay = Math.round(hourlyRate * expectedRegularHours * (1 + holidayRate) * 100) / 100;
+    expectedOvertimePay = Math.round(hourlyRate * expectedOtWorkedHours * (1 + holidayRate + partTimeOTRate) * 100) / 100;
+  } else {
+    expectedHolidayPay = Math.round(hourlyRate * scheduledHoursPerDay * (1 + holidayRate) * 100) / 100;
+    expectedOvertimePay = 0;
+  }
+
+  // Expected Night Shift Differential — uses the SCHEDULED timeIn/TimeOut
+  // (not ActualTimeIn/ActualTimeOut), since this represents "if they
+  // clocked in and out exactly on schedule."
+  const nightDiffRateForExpected = parsePercent(ps.NightDiffRate);
+  let expectedNightShiftDiff = 0;
+
+  if (nightDiffRateForExpected > 0 && ps.NightDiffTimeSpan) {
+    const [ndStart, ndEnd] = ps.NightDiffTimeSpan.split('-').map(t => t.trim());
+    const ndStartMin = timeToMinutes(ndStart);
+    let ndEndMin = timeToMinutes(ndEnd);
+    if (ndEndMin <= ndStartMin) ndEndMin += 24 * 60;
+
+    let expectedNightMins = 0;
+    for (const shift of schedule) {
+      const schedIn = timeToMinutes(shift.timeIn);
+      let schedOut = timeToMinutes(shift.TimeOut);
+      if (schedOut <= schedIn) schedOut += 24 * 60;
+
+      const overlapStart = Math.max(schedIn, ndStartMin);
+      const overlapEnd = Math.min(schedOut, ndEndMin);
+      if (overlapEnd > overlapStart) expectedNightMins += overlapEnd - overlapStart;
+    }
+
+    if (hasOT && otRow?.Schedules) {
+      const otSlots = typeof otRow.Schedules === 'string' ? JSON.parse(otRow.Schedules) : otRow.Schedules;
+      for (const slot of otSlots) {
+        let otIn = timeToMinutes(slot.timeIn);
+        let otOut = timeToMinutes(slot.timeOut);
+        if (otOut <= otIn) otOut += 24 * 60;
+        const overlapStart = Math.max(otIn, ndStartMin);
+        const overlapEnd = Math.min(otOut, ndEndMin);
+        if (overlapEnd > overlapStart) expectedNightMins += overlapEnd - overlapStart;
+      }
+    }
+
+    expectedNightShiftDiff = Math.round(hourlyRate * (expectedNightMins / 60) * nightDiffRateForExpected * 100) / 100;
+  }
+
+  if (workedHours <= 0) {
+    console.log('[HolidayCalculator] No hours worked — Holiday pay = 0 (Expected still computed).');
+    await supabase.from('Attendance').update({
+      Regular: 0,
+      Holiday: 0,
+      Overtime: 0,
+      NightShiftDifferential: 0,
+      ExpectedRegular: 0,
+      ExpectedHoliday: expectedHolidayPay,
+      ExpectedOvertime: expectedOvertimePay,
+      ExpectedNightShiftDifferential: expectedNightShiftDiff,
+      StampsFeedback: enrichedFeedback,
+    })
+      .eq('EmployeeID', EmployeeID).eq('CompanyCode', companyCode).eq('AttendanceDate', attendanceDate);
+    return;
+  }
+
+  // ── Step 7: Compute actual Holiday & Overtime pay ─────
   let holidayPay = 0;
   let overtimePay = 0;
 
@@ -323,9 +440,15 @@ export async function HolidayCalculator({
   const { error: updateError } = await supabase
     .from('Attendance')
     .update({
+      Regular: 0,
       Holiday: holidayPay,
       Overtime: overtimePay,
       NightShiftDifferential: nightShiftDiff,
+      ExpectedRegular: 0,
+      ExpectedHoliday: expectedHolidayPay,
+      ExpectedOvertime: expectedOvertimePay,
+      ExpectedNightShiftDifferential: expectedNightShiftDiff,
+      StampsFeedback: enrichedFeedback,
     })
     .eq('EmployeeID', EmployeeID)
     .eq('CompanyCode', companyCode)
@@ -336,5 +459,5 @@ export async function HolidayCalculator({
     return;
   }
 
-  console.log('[HolidayCalculator] Written — Holiday:', holidayPay, '| Overtime:', overtimePay, '| NightDiff:', nightShiftDiff);
+  console.log('[HolidayCalculator] Written — Holiday:', holidayPay, '| Overtime:', overtimePay, '| NightDiff:', nightShiftDiff, '| Expected Holiday:', expectedHolidayPay);
 }

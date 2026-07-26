@@ -344,7 +344,7 @@ export default function Navigation() {
           {/* Desktop CTA */}
           <div className="nav-cta">
             {hasSession ? (
-              <a href="/Account/Dashboard" className="dashboard">
+              <a href="/ETimeModule/EmployeeTime" className="dashboard">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="7" height="7" rx="1" />
                   <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -393,7 +393,7 @@ export default function Navigation() {
           <div className="mobile-divider" />
           <div className="mobile-cta">
             {hasSession ? (
-              <a href="/Account/Dashboard" className="dashboard">Go to Dashboard</a>
+              <a href="/ETimeModule/EmployeeTime" className="dashboard">Go to Dashboard</a>
             ) : (
               <a href="/login">Login / Register</a>
             )}

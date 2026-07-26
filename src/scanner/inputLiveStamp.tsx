@@ -1,7 +1,6 @@
 // inputLiveStamp.tsx
 import { supabase } from '../../utils/supabase';
-import { HolidayCalculator } from '../ETimeModule/Computer/HolidayCalculator';
-import { RegularScheduleComputer } from '../ETimeModule/Computer/RegularScheduleComputer';
+import { AttendancePayDispatcher } from '../ETimeModule/Computer/AttendanceDispatcher';
 
 type BreakEntry = {
   breakIn: string;
@@ -66,26 +65,6 @@ function computeTotalWorkingMinutes(schedule: ShiftEntry[]): number {
     total += shiftOutMin - shiftInMin;
   }
   return total;
-}
-
-async function checkHolidayForDate(companyCode: string, attendanceDate: string): Promise<boolean> {
-  const dateObj = new Date(attendanceDate + 'T00:00:00');
-  const month = dateObj.getMonth() + 1;
-  const day = dateObj.getDate();
-
-  const { data: allHolidays } = await supabase
-    .from('Holidays')
-    .select('Date, Recurring')
-    .eq('CompanyCode', companyCode);
-
-  return (allHolidays ?? []).some(h => {
-    if (h.Date === attendanceDate) return true;
-    if (h.Recurring) {
-      const hDate = new Date(h.Date + 'T00:00:00');
-      return hDate.getMonth() + 1 === month && hDate.getDate() === day;
-    }
-    return false;
-  });
 }
 
 export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: string; companyCode: string }): Promise<StampResult> {
@@ -272,26 +251,16 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
       return { success: false, message: 'All stamps already filled for today.' };
     }
 
-    // ── Step 6: Compute TotalWorkingHours + trigger calculators ──
-    let totalWorkingMinutes: number | null = null;
-    if (isLastStamp) {
-      totalWorkingMinutes = computeTotalWorkingMinutes(schedule);
-      console.log('[inputLiveStamp] Total working minutes:', totalWorkingMinutes);
+    // ── Step 6: Compute TotalWorkingHours (pure — no DB read yet) ──
+    const totalWorkingMinutes: number | null = isLastStamp ? computeTotalWorkingMinutes(schedule) : null;
+    if (isLastStamp) console.log('[inputLiveStamp] Total working minutes:', totalWorkingMinutes);
 
-      // Check if attendance date is a holiday
-      const isHoliday = await checkHolidayForDate(companyCode, attendanceDate);
-      console.log('[inputLiveStamp] Is holiday:', isHoliday, 'for date:', attendanceDate);
-
-      if (isHoliday) {
-        console.log('[inputLiveStamp] → Calling HolidayCalculator');
-        await HolidayCalculator({ EmployeeID, companyCode, attendanceDate });
-      } else {
-        console.log('[inputLiveStamp] → Calling RegularScheduleComputer');
-        await RegularScheduleComputer({ EmployeeID, companyCode, attendanceDate });
-      }
-    }
-
-    // ── Step 7: Update Attendance row ──────────────────────
+    // ── Step 7: Save this stamp first ──────────────────────
+    // Must happen BEFORE AttendancePayDispatcher runs below — the calculators
+    // read the Attendance row fresh from the DB, and also write back their
+    // own enriched StampsFeedback (with peso deductionAmount). If this write
+    // ran after AttendancePayDispatcher, it would clobber that enrichment with
+    // the plain (un-enriched) `feedback` array.
     const { error: updateError } = await supabase
       .from('Attendance')
       .update({
@@ -308,6 +277,12 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
     if (updateError) {
       console.error('[inputLiveStamp] Update error:', updateError.message);
       return { success: false, message: 'Failed to save stamp.' };
+    }
+
+    // ── Step 8: Trigger pay computation on the final stamp ─
+    if (isLastStamp) {
+      console.log('[inputLiveStamp] → Calling AttendancePayDispatcher');
+      await AttendancePayDispatcher({ EmployeeID, companyCode, attendanceDate });
     }
 
     cooldownMap.set(key, Date.now());

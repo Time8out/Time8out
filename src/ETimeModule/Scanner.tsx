@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../utils/supabase';
 
 const tiles = [
   {
@@ -92,6 +93,64 @@ const tiles = [
     accentMuted: '#fddcc9',
   },
 ];
+
+function CompanyCodeBadge({ companyCode }: { companyCode: string | null }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!companyCode) return null;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(companyCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      title="Copy company code"
+      style={{
+        all: 'unset',
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 14px',
+        background: copied ? '#dcfce7' : '#fff0e8',
+        border: `1.5px solid ${copied ? '#86efac' : '#fddcc9'}`,
+        borderRadius: 99,
+        transition: 'all 0.15s ease',
+      }}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={copied ? '#16a34a' : '#e9520e'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <span style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', letterSpacing: '0.04em' }}>
+        Company Code
+      </span>
+      <span style={{
+        fontSize: 14,
+        fontWeight: 700,
+        color: copied ? '#16a34a' : '#c2410c',
+        fontFamily: 'monospace',
+        letterSpacing: '0.03em',
+      }}>
+        {companyCode}
+      </span>
+      {copied ? (
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8l3.5 3.5L13 4" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ) : (
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <rect x="5" y="5" width="9" height="9" rx="2" stroke="#9ca3af" strokeWidth="1.5"/>
+          <path d="M5 5V4a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-1" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      )}
+    </button>
+  );
+}
 
 function LinkRow({ route, label }: { route: string; label: string }) {
   const [copied, setCopied] = useState(false);
@@ -313,6 +372,18 @@ function ScannerTile({ tile }: {
 }
 
 function Scanner() {
+  const [companyCode, setCompanyCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem('t8_session');
+    if (!raw) return;
+    const email = atob(raw).split(':')[1];
+    supabase.from('users').select('CompanyCode').eq('Email', email).single()
+      .then(({ data, error }) => {
+        if (!error && data) setCompanyCode(data.CompanyCode);
+      });
+  }, []);
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -328,22 +399,26 @@ function Scanner() {
         padding: '20px 24px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
       }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <div style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #e9520e, #0ea5e9)',
-            }}/>
-            <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6b7280' }}>
-              Scanning Suite
-            </span>
+        <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #e9520e, #0ea5e9)',
+              }}/>
+              <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6b7280' }}>
+                Scanning Suite
+              </span>
+            </div>
+            <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111827', letterSpacing: '-0.02em', lineHeight: 1.2, margin: 0 }}>
+              Choose a Scanner
+            </h1>
+            <p style={{ fontSize: 15, color: '#6b7280', margin: '6px 0 0', lineHeight: 1.6 }}>
+              Select the scanning method that matches your use case.
+            </p>
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111827', letterSpacing: '-0.02em', lineHeight: 1.2, margin: 0 }}>
-            Choose a Scanner
-          </h1>
-          <p style={{ fontSize: 15, color: '#6b7280', margin: '6px 0 0', lineHeight: 1.6 }}>
-            Select the scanning method that matches your use case.
-          </p>
+
+          <CompanyCodeBadge companyCode={companyCode} />
         </div>
       </div>
 

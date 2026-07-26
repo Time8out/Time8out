@@ -306,6 +306,10 @@ export default function LoginRegister() {
         .auth-plan-price{font-size:var(--font-size-sm);font-weight:600;color:var(--brand-orange);margin-top:2px}
         .auth-plan-cadence{font-size:var(--font-size-xs);color:var(--color-text-muted);margin-top:4px}
         .auth-plan-range{font-size:var(--font-size-xs);color:var(--color-text-faint);margin-top:2px}
+        .auth-plan-card.disabled{cursor:not-allowed;background:var(--color-bg-alt);opacity:0.6}
+        .auth-plan-card.disabled:hover{border-color:var(--color-border)}
+        .auth-plan-card.disabled .auth-plan-name,.auth-plan-card.disabled .auth-plan-price{color:var(--color-text-faint)}
+        .auth-plan-locked-note{font-size:var(--font-size-xs);color:var(--color-text-faint);font-style:italic;margin-top:6px;line-height:1.4}
 
         .sub-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:300;padding:16px}
         .sub-modal{background:var(--color-white);border-radius:var(--radius-xl);box-shadow:var(--shadow-xl);width:100%;max-width:420px;overflow:hidden}
@@ -498,19 +502,27 @@ export default function LoginRegister() {
                     <div className="auth-field">
                       <label className="auth-label">Choose your plan <span>*</span></label>
                       <div className="auth-plans-grid">
-                        {SUBSCRIPTION_PLANS.map(plan => (
-                          <button
-                            type="button"
-                            key={plan.key}
-                            className={`auth-plan-card${reg.subscriptionPlan === plan.key ? " selected" : ""}`}
-                            onClick={() => setRegField("subscriptionPlan", plan.key)}
-                          >
-                            <div className="auth-plan-name">{plan.name}</div>
-                            <div className="auth-plan-price">{plan.priceLabel}</div>
-                            <div className="auth-plan-cadence">{plan.cadence}</div>
-                            <div className="auth-plan-range">{plan.range}</div>
-                          </button>
-                        ))}
+                        {SUBSCRIPTION_PLANS.map(plan => {
+                          const isAvailable = plan.key === "FreeTrial";
+                          return (
+                            <button
+                              type="button"
+                              key={plan.key}
+                              className={`auth-plan-card${reg.subscriptionPlan === plan.key ? " selected" : ""}${isAvailable ? "" : " disabled"}`}
+                              onClick={() => isAvailable && setRegField("subscriptionPlan", plan.key)}
+                              disabled={!isAvailable}
+                              title={isAvailable ? undefined : "Contact admin for plan upgrade"}
+                            >
+                              <div className="auth-plan-name">{plan.name}</div>
+                              <div className="auth-plan-price">{plan.priceLabel}</div>
+                              <div className="auth-plan-cadence">{plan.cadence}</div>
+                              <div className="auth-plan-range">{plan.range}</div>
+                              {!isAvailable && (
+                                <div className="auth-plan-locked-note">Contact admin for Plan Upgrade</div>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 

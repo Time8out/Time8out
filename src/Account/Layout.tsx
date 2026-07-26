@@ -259,7 +259,7 @@ function Layout({ children }: LayoutProps) {
             </button>
 
             {/* Logo */}
-            <a href="/Account/Dashboard" className="layout-logo" style={{ textDecoration: "none" }}>
+            <a href="/ETimeModule/EmployeeTime" className="layout-logo" style={{ textDecoration: "none" }}>
               <img src={logo} alt="Time8out" />
             </a>
           </div>
