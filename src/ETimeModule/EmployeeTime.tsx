@@ -61,6 +61,55 @@ function getShiftStatus(shift: ShiftEntry): { label: string; color: string } {
 
 function fmt(d: Date) { return d.toISOString().split("T")[0]; }
 
+function ShiftBreakdown({ rec }: { rec: AttendanceRecord }) {
+  return (
+    <>
+      <div className="et-detail-title">Shift Breakdown</div>
+      {(rec.ScheduleTimeAndAttendance ?? []).map((s, si) => {
+        const ss = getShiftStatus(s);
+        return (
+          <div key={si} className="et-shift">
+            <div className="et-shift-header">
+              <div>
+                <div className="et-shift-times">{s.timeIn} – {s.TimeOut}</div>
+                <div className="et-shift-actual">
+                  Time in: <strong>{s.ActualTimeIn || "—"}</strong>&nbsp;&nbsp;·&nbsp;&nbsp;Time out: <strong>{s.ActualTimeOut || "—"}</strong>
+                </div>
+              </div>
+              <span className="et-shift-status" style={{ color: ss.color }}>{ss.label}</span>
+            </div>
+            {(s.breaks?.length ?? 0) > 0 && (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Breaks</div>
+                <div className="et-breaks">
+                  {s.breaks.map((b, bi) => (
+                    <div key={bi} className="et-break-row">
+                      <span className="et-break-sched">
+                        <span className="et-break-label">Sched </span>{b.breakIn} – {b.breakOut}
+                      </span>
+                      {b.ActualBreakIn === "MISSED"
+                        ? <span className="et-missed">Missed</span>
+                        : <>
+                            <span className="et-break-actual">
+                              <span className="et-break-label">In </span>{b.ActualBreakIn || "—"}
+                            </span>
+                            <span className="et-break-actual">
+                              <span className="et-break-label">Out </span>{b.ActualBreakOut || "—"}
+                            </span>
+                          </>
+                      }
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 export default function EmployeeTime() {
   const [employeeID, setEmployeeID] = useState<string | null>(null);
   const [companyCode, setCompanyCode] = useState<string | null>(null);
@@ -173,8 +222,8 @@ export default function EmployeeTime() {
         .et-filter{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-5);display:flex;align-items:flex-end;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-5);box-shadow:var(--shadow-xs)}
         .et-filter-field{display:flex;flex-direction:column;gap:var(--space-2)}
         .et-filter-label{font-size:var(--font-size-xs);font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.06em}
-        .et-filter-input{height:38px}
-        @media(max-width:480px){.et-filter{flex-direction:column;align-items:stretch}}
+        .et-filter-input{height:38px;width:160px}
+        @media(max-width:480px){.et-filter{flex-direction:column;align-items:stretch}.et-filter-input{width:100%}}
 
         /* Stats */
         .et-stats{display:flex;gap:var(--space-3);margin-bottom:var(--space-5);flex-wrap:wrap}
@@ -183,22 +232,35 @@ export default function EmployeeTime() {
         .et-stat-label{font-size:10px;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
 
         /* Table */
-        .et-table-wrap{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);margin-bottom:var(--space-5)}
-        .et-table{width:100%;border-collapse:collapse}
+        .et-table-wrap{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:auto;box-shadow:var(--shadow-sm);margin-bottom:var(--space-5)}
+        @media(max-width:760px){.et-table-wrap{display:none}}
+        .et-table{width:100%;border-collapse:collapse;min-width:720px}
         .et-table thead tr{border-bottom:2px solid var(--color-border)}
         .et-table th{text-align:left;font-size:var(--font-size-xs);font-weight:700;color:var(--color-text-muted);letter-spacing:.07em;text-transform:uppercase;padding:10px 14px;white-space:nowrap}
         .et-table td{padding:12px 14px;font-size:var(--font-size-sm);color:var(--color-text-secondary);border-bottom:1px solid var(--color-border);vertical-align:middle}
         .et-table tbody tr.et-main-row{cursor:pointer;transition:background var(--transition-fast)}
         .et-table tbody tr.et-main-row:hover{background:var(--brand-orange-light)}
         .et-table tbody tr.et-main-row:hover td{color:var(--color-text)}
-        @media(max-width:640px){.et-col-deduction{display:none}}
-        @media(max-width:480px){.et-col-hours{display:none}.et-table th,.et-table td{padding:10px 10px}}
 
         .et-status-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;border:1px solid}
         .et-mono{font-family:monospace;font-size:12px}
         .et-missed{color:#dc2626;font-weight:700}
         .et-muted{color:var(--color-text-faint)}
         .et-chevron{color:var(--color-text-faint);font-size:11px}
+
+        /* Mobile card list — replaces the table below 760px so columns never get squeezed/wrapped */
+        .et-card-list{display:none;flex-direction:column;gap:var(--space-3);margin-bottom:var(--space-5)}
+        @media(max-width:760px){.et-card-list{display:flex}}
+        .et-record-card{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);box-shadow:var(--shadow-xs);cursor:pointer;transition:box-shadow .15s,border-color .15s}
+        .et-record-card:active{box-shadow:none}
+        .et-record-top{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3)}
+        .et-record-date{font-size:var(--font-size-sm);font-weight:700;color:var(--color-text);margin-bottom:2px}
+        .et-record-shift{font-size:12px;color:var(--color-text-muted);font-family:monospace}
+        .et-record-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-3);margin-bottom:var(--space-3)}
+        .et-record-cell{display:flex;flex-direction:column;gap:2px;min-width:0}
+        .et-record-label{font-size:10px;font-weight:700;color:var(--color-text-faint);text-transform:uppercase;letter-spacing:.05em}
+        .et-record-chevron{font-size:11px;font-weight:700;color:var(--brand-orange);text-align:center;padding-top:var(--space-2);border-top:1px dashed var(--color-border)}
+        .et-record-detail{margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px solid var(--color-border)}
 
         /* Expanded detail */
         .et-detail td{padding:0;background:var(--color-bg-alt)}
@@ -258,7 +320,6 @@ export default function EmployeeTime() {
               type="date"
               value={dateFrom}
               onChange={e => setDateFrom(e.target.value)}
-              style={{ width: 160 }}
             />
           </div>
           <div className="et-filter-field">
@@ -268,7 +329,6 @@ export default function EmployeeTime() {
               type="date"
               value={dateTo}
               onChange={e => setDateTo(e.target.value)}
-              style={{ width: 160 }}
             />
           </div>
           <button
@@ -364,48 +424,7 @@ export default function EmployeeTime() {
                             <tr key={`${rec.id}-detail`} className="et-detail">
                               <td colSpan={8}>
                                 <div className="et-detail-inner">
-                                  <div className="et-detail-title">Shift Breakdown</div>
-                                  {(rec.ScheduleTimeAndAttendance ?? []).map((s, si) => {
-                                    const ss = getShiftStatus(s);
-                                    return (
-                                      <div key={si} className="et-shift">
-                                        <div className="et-shift-header">
-                                          <div>
-                                            <div className="et-shift-times">{s.timeIn} – {s.TimeOut}</div>
-                                            <div className="et-shift-actual">
-                                              Time in: <strong>{s.ActualTimeIn || "—"}</strong>&nbsp;&nbsp;·&nbsp;&nbsp;Time out: <strong>{s.ActualTimeOut || "—"}</strong>
-                                            </div>
-                                          </div>
-                                          <span className="et-shift-status" style={{ color: ss.color }}>{ss.label}</span>
-                                        </div>
-                                        {(s.breaks?.length ?? 0) > 0 && (
-                                          <>
-                                            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Breaks</div>
-                                            <div className="et-breaks">
-                                              {s.breaks.map((b, bi) => (
-                                                <div key={bi} className="et-break-row">
-                                                  <span className="et-break-sched">
-                                                    <span className="et-break-label">Sched </span>{b.breakIn} – {b.breakOut}
-                                                  </span>
-                                                  {b.ActualBreakIn === "MISSED"
-                                                    ? <span className="et-missed">Missed</span>
-                                                    : <>
-                                                        <span className="et-break-actual">
-                                                          <span className="et-break-label">In </span>{b.ActualBreakIn || "—"}
-                                                        </span>
-                                                        <span className="et-break-actual">
-                                                          <span className="et-break-label">Out </span>{b.ActualBreakOut || "—"}
-                                                        </span>
-                                                      </>
-                                                  }
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
+                                  <ShiftBreakdown rec={rec} />
                                 </div>
                               </td>
                             </tr>
@@ -417,6 +436,67 @@ export default function EmployeeTime() {
                 </table>
               )}
             </div>
+
+            {/* ── Mobile card list — same records/state, no squeezed columns ── */}
+            {records.length > 0 && (
+              <div className="et-card-list">
+                {records.map(rec => {
+                  const shift = rec.ScheduleTimeAndAttendance?.[0];
+                  const isExpanded = expandedId === rec.id;
+                  const statusStyle = getStatusStyle(rec.status);
+                  const isMissed = shift?.ActualTimeIn === "MISSED";
+
+                  return (
+                    <div key={rec.id} className="et-record-card" onClick={() => setExpandedId(isExpanded ? null : rec.id)}>
+                      <div className="et-record-top">
+                        <div>
+                          <div className="et-record-date">
+                            {new Date(rec.AttendanceDate + "T00:00:00").toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
+                          </div>
+                          <div className="et-record-shift">{shift ? `${shift.timeIn} – ${shift.TimeOut}` : "—"}</div>
+                        </div>
+                        <span className="et-status-badge" style={statusStyle}>{rec.status}</span>
+                      </div>
+
+                      <div className="et-record-grid">
+                        <div className="et-record-cell">
+                          <span className="et-record-label">Time In</span>
+                          <span className="et-mono">
+                            {isMissed ? <span className="et-missed">Missed</span> : shift?.ActualTimeIn ? shift.ActualTimeIn : <span className="et-muted">—</span>}
+                          </span>
+                        </div>
+                        <div className="et-record-cell">
+                          <span className="et-record-label">Time Out</span>
+                          <span className="et-mono">
+                            {isMissed ? <span className="et-missed">Missed</span> : shift?.ActualTimeOut ? shift.ActualTimeOut : <span className="et-muted">—</span>}
+                          </span>
+                        </div>
+                        <div className="et-record-cell">
+                          <span className="et-record-label">Hours</span>
+                          <span style={{ fontWeight: (rec.TotalWorkingHours ?? 0) > 0 ? 600 : 400, color: "var(--color-text)" }}>
+                            {formatHours(rec.TotalWorkingHours)}
+                          </span>
+                        </div>
+                        <div className="et-record-cell">
+                          <span className="et-record-label">Deduction</span>
+                          <span style={{ color: (rec.TimeDeduction ?? 0) > 0 ? "#dc2626" : "var(--color-text-muted)", fontWeight: (rec.TimeDeduction ?? 0) > 0 ? 700 : 400 }}>
+                            {(rec.TimeDeduction ?? 0) > 0 ? `−${formatMinutes(rec.TimeDeduction)}` : "—"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="et-record-chevron">{isExpanded ? "▴ Hide details" : "▾ View details"}</div>
+
+                      {isExpanded && (
+                        <div className="et-record-detail">
+                          <ShiftBreakdown rec={rec} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* ── Total Hours Footer ── */}
             {records.length > 0 && (
