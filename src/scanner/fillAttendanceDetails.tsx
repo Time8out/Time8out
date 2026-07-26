@@ -14,12 +14,14 @@ export async function fillAttendanceDetails({ EmployeeID, companyCode }: { Emplo
   const today = new Date(serverTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 
   // ── Step 2: Check for open attendance row (night shift support) ──
+  // Must include null status explicitly — NULL <> 'Finished' is NULL (not
+  // true) in SQL, so a plain .neq() would silently miss in-progress rows.
   const { data: openRow } = await supabase
     .from('Attendance')
     .select('id, AttendanceDate')
     .eq('EmployeeID', EmployeeID)
     .eq('CompanyCode', companyCode)
-    .neq('status', 'Finished')
+    .or('status.is.null,status.neq.Finished')
     .order('AttendanceDate', { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -87,12 +87,17 @@ export async function checkScheduleType({ EmployeeID, companyCode }: { EmployeeI
   const today = new Date(serverTime).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 
   // ── Step 2: Find open attendance row (night shift support) ──
+  // NOTE: status is NULL for a freshly-created, in-progress row, and in SQL
+  // `NULL <> 'Finished'` evaluates to NULL (not true) — a plain .neq() would
+  // silently exclude those rows, making this always think no open row exists
+  // and rebuild ScheduleTimeAndAttendance from scratch on every scan, wiping
+  // out any ActualTimeIn already recorded. Must explicitly include nulls.
   const { data: openRow } = await supabase
     .from('Attendance')
     .select('AttendanceDate, ScheduleTimeAndAttendance')
     .eq('EmployeeID', EmployeeID)
     .eq('CompanyCode', companyCode)
-    .neq('status', 'Finished')
+    .or('status.is.null,status.neq.Finished')
     .order('AttendanceDate', { ascending: false })
     .limit(1)
     .maybeSingle();
