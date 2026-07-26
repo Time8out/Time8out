@@ -1,12 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { supabase } from '../../utils/supabase';
 import ScannedProfile from './ScannedProfile';
+import { useIsMobile } from './useIsMobile';
 import { handleScan } from './ScannerLogic';
 import type { StampResult } from './inputLiveStamp';
+import type { ScanFormat } from './scanFormats';
+
+// Lazy-loaded so the (fairly large) camera-decoding library is only
+// ever downloaded by phone browsers, never by desktop users.
+const CameraScanner = lazy(() => import('./CameraScanner'));
+
+const QR_FORMATS: ScanFormat[] = ['QR_CODE'];
 
 type AuthState = 'idle' | 'verifying' | 'granted' | 'denied';
 
 function QRcodeScanner() {
+  const isMobile = useIsMobile();
+
   // ── Auth state ──────────────────────────────────────────
   const [authState, setAuthState] = useState<AuthState>('idle');
   const [companyCodeInput, setCompanyCodeInput] = useState('');
@@ -23,6 +33,7 @@ function QRcodeScanner() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
+  const scanLockRef = useRef(false);
 
   // Auto-focus the company code input on mount
   useEffect(() => {
@@ -68,7 +79,35 @@ function QRcodeScanner() {
     }
   }
 
-  // ── Scanner keystroke capture ────────────────────────────
+  // ── Shared scan processing (used by both the hardware-scanner
+  // keystroke path and the phone camera path) ──────────────────
+  async function processScan(value: string) {
+    scanLockRef.current = true;
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+
+    setScannedValue(value);
+    setStampResult(null);
+    setShowModal(true);
+    setFlash(true);
+    setTimeout(() => setFlash(false), 600);
+
+    const result = await handleScan(value, companyCode);
+    setStampResult(result);
+
+    closeTimerRef.current = setTimeout(() => {
+      setShowModal(false);
+      scanLockRef.current = false; // allow the camera to pick up a new code again
+    }, 6000);
+  }
+
+  // Camera decode results come in on every frame the code is visible —
+  // ignore repeats while a scan is already showing/being processed.
+  function handleCameraDecode(value: string) {
+    if (scanLockRef.current) return;
+    processScan(value.trim());
+  }
+
+  // ── Scanner keystroke capture (USB/Bluetooth HID scanners) ──
   const processingRef = useRef(false);
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -80,23 +119,8 @@ function QRcodeScanner() {
       setTimeout(() => { processingRef.current = false; }, 50);
 
       const value = bufferRef.current.trim();
-      if (value) {
-        // Clear any existing close timer
-        if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      if (value) await processScan(value);
 
-        // Show modal immediately with processing state
-        setScannedValue(value);
-        setStampResult(null);
-        setShowModal(true);
-        setFlash(true);
-        setTimeout(() => setFlash(false), 600);
-
-        // Wait for result then start the 4s countdown
-        const result = await handleScan(value, companyCode);
-        setStampResult(result);
-
-        closeTimerRef.current = setTimeout(() => setShowModal(false), 6000);
-      }
       bufferRef.current = '';
       if (inputRef.current) inputRef.current.value = '';
       return;
@@ -346,33 +370,44 @@ function QRcodeScanner() {
           transition: 'all 0.15s ease',
           boxShadow: flash ? '0 0 0 4px rgba(14,165,233,0.12)' : '0 2px 8px rgba(0,0,0,0.06)',
         }}>
-          <div style={{ width: 120, height: 120, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {[
-              { top: 0, left: 0, borderTop: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderLeft: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
-              { top: 0, right: 0, borderTop: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderRight: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
-              { bottom: 0, left: 0, borderBottom: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderLeft: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
-              { bottom: 0, right: 0, borderBottom: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderRight: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
-            ].map((style, i) => (
-              <div key={i} style={{ position: 'absolute', width: 20, height: 20, borderRadius: 2, transition: 'all 0.15s', ...style as React.CSSProperties }}/>
-            ))}
-            <svg width="64" height="64" viewBox="0 0 48 48" fill="none" style={{ color: flash ? '#0ea5e9' : '#9ca3af', transition: 'color 0.15s' }}>
-              <rect x="4"  y="4"  width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
-              <rect x="9"  y="9"  width="6"  height="6"  rx="1"   fill="currentColor"/>
-              <rect x="28" y="4"  width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
-              <rect x="33" y="9"  width="6"  height="6"  rx="1"   fill="currentColor"/>
-              <rect x="4"  y="28" width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
-              <rect x="9"  y="33" width="6"  height="6"  rx="1"   fill="currentColor"/>
-              <rect x="28" y="28" width="5"  height="5"  rx="1"   fill="currentColor"/>
-              <rect x="35" y="28" width="5"  height="5"  rx="1"   fill="currentColor" opacity=".6"/>
-              <rect x="28" y="35" width="5"  height="5"  rx="1"   fill="currentColor" opacity=".6"/>
-              <rect x="35" y="35" width="5"  height="5"  rx="1"   fill="currentColor"/>
-            </svg>
-          </div>
+          {isMobile ? (
+            <Suspense fallback={<div style={{ width: 120, height: 120 }} />}>
+              <CameraScanner
+                formats={QR_FORMATS}
+                accentColor={flash ? '#0ea5e9' : '#9ca3af'}
+                paused={showModal}
+                onDecode={handleCameraDecode}
+              />
+            </Suspense>
+          ) : (
+            <div style={{ width: 120, height: 120, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {[
+                { top: 0, left: 0, borderTop: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderLeft: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
+                { top: 0, right: 0, borderTop: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderRight: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
+                { bottom: 0, left: 0, borderBottom: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderLeft: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
+                { bottom: 0, right: 0, borderBottom: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}`, borderRight: `3px solid ${flash ? '#0ea5e9' : '#9ca3af'}` },
+              ].map((style, i) => (
+                <div key={i} style={{ position: 'absolute', width: 20, height: 20, borderRadius: 2, transition: 'all 0.15s', ...style as React.CSSProperties }}/>
+              ))}
+              <svg width="64" height="64" viewBox="0 0 48 48" fill="none" style={{ color: flash ? '#0ea5e9' : '#9ca3af', transition: 'color 0.15s' }}>
+                <rect x="4"  y="4"  width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
+                <rect x="9"  y="9"  width="6"  height="6"  rx="1"   fill="currentColor"/>
+                <rect x="28" y="4"  width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
+                <rect x="33" y="9"  width="6"  height="6"  rx="1"   fill="currentColor"/>
+                <rect x="4"  y="28" width="16" height="16" rx="2.5" stroke="currentColor" strokeWidth="3" fill="none"/>
+                <rect x="9"  y="33" width="6"  height="6"  rx="1"   fill="currentColor"/>
+                <rect x="28" y="28" width="5"  height="5"  rx="1"   fill="currentColor"/>
+                <rect x="35" y="28" width="5"  height="5"  rx="1"   fill="currentColor" opacity=".6"/>
+                <rect x="28" y="35" width="5"  height="5"  rx="1"   fill="currentColor" opacity=".6"/>
+                <rect x="35" y="35" width="5"  height="5"  rx="1"   fill="currentColor"/>
+              </svg>
+            </div>
+          )}
 
           <p style={{ fontSize: 15, color: '#6b7280', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
             {flash
               ? <span style={{ color: '#0ea5e9', fontWeight: 700 }}>Scanned!</span>
-              : 'Ready — scan a QR code now'
+              : isMobile ? 'Point your camera at a QR code' : 'Ready — scan a QR code now'
             }
           </p>
         </div>
@@ -381,7 +416,7 @@ function QRcodeScanner() {
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280', background: '#f3f4f6', padding: '6px 14px', borderRadius: 99 }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16a34a', boxShadow: '0 0 0 2px rgba(22,163,74,0.2)', display: 'inline-block' }}/>
-            Listening for scanner input
+            {isMobile ? 'Camera active' : 'Listening for scanner input'}
           </div>
         </div>
       </div>
