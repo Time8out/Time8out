@@ -27,11 +27,6 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
-function minutesToTime(mins: number): string {
-  const total = ((mins % 1440) + 1440) % 1440;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-}
-
 function diffHours(start: string, end: string): number {
   let s = timeToMinutes(start);
   let e = timeToMinutes(end);
