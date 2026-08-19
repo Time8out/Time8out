@@ -54,6 +54,7 @@ export default function PaySettings() {
   const [ndStart, setNdStart]       = useState("22:00");
   const [ndEnd, setNdEnd]           = useState("06:00");
   const [otSettings, setOtSettings] = useState<Record<OTKey, OTSetting>>(DEFAULT_OT);
+  const [allowSelfPayslip, setAllowSelfPayslip] = useState(true);
   const [saving, setSaving]         = useState(false);
   const [msg, setMsg]               = useState<{ type: "error" | "success"; text: string } | null>(null);
 
@@ -105,6 +106,8 @@ export default function PaySettings() {
       }
     }
     setOtSettings(loaded);
+
+    setAllowSelfPayslip(ps?.AllowSelfPayslip !== false);
   }
 
   function setOtField(key: OTKey, field: keyof OTSetting, value: boolean | string) {
@@ -127,7 +130,7 @@ export default function PaySettings() {
 
     setSaving(true); setMsg(null);
 
-    const payStructure: Record<string, string> = { Structure: structure, Formula: rate.trim() };
+    const payStructure: Record<string, string | boolean> = { Structure: structure, Formula: rate.trim(), AllowSelfPayslip: allowSelfPayslip };
 
     if (ndEnabled) {
       payStructure.NightDiffRate     = `${ndRate}%`;
@@ -164,6 +167,7 @@ export default function PaySettings() {
     if (ps.NightDiffRate) base += ` · ND ${ps.NightDiffRate}`;
     const otOn = OT_TYPES.filter(({ key }) => ps[key]).map(({ label }) => label.split(" ")[0]);
     if (otOn.length) base += ` · OT: ${otOn.join(", ")}`;
+    if (ps.AllowSelfPayslip === false) base += ` · Self-payslip off`;
     return base;
   }
 
@@ -448,6 +452,21 @@ export default function PaySettings() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* ── Self-Service Payslip ── */}
+              <div className="pse-section-divider" />
+
+              <div className="pse-nd-header">
+                <div>
+                  <span className="pse-nd-label">🧾 Self-Service Payslip</span>
+                  <span className="pse-nd-sub">Let this employee view/print their own payslip from Attendance</span>
+                </div>
+                <label className="pse-toggle">
+                  <input type="checkbox" checked={allowSelfPayslip} onChange={e => setAllowSelfPayslip(e.target.checked)} />
+                  <div className="pse-toggle-track" />
+                  <div className="pse-toggle-thumb" />
+                </label>
               </div>
 
               {msg && <div className={`pse-alert ${msg.type}`}>{msg.text}</div>}

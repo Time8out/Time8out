@@ -16,6 +16,7 @@ const MENU_ICONS: Record<string, string> = {
   "Pay Structure": "⚙",
   "Holidays": "🎉",
   "Over-Time Approval": "✅",
+  "Generate Payslip": "🧾",
 };
 
 const MENU_PATHS: Record<string, string> = {
@@ -32,6 +33,7 @@ const MENU_PATHS: Record<string, string> = {
   "Holidays": "/ETimeModule/Holidays",
   "Over-Time Approval": "/ETimeModule/OverTimeApproval",
   "Scanner": "/ETimeModule/Scanner",
+  "Generate Payslip": "/ETimeModule/AdminPayslip",
 };
 
 // Menus visible to employees only

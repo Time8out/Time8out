@@ -12,6 +12,7 @@ import Holidays from "./ETimeModule/Holiday"
 import OverTimeApproval from "./ETimeModule/OverTimeApproval"
 import AttendanceControl from "./ETimeModule/AttendanceControl"
 import Profile from "./ETimeModule/Profile"
+import AdminPayslip from "./ETimeModule/AdminPayslip"
 function ETimeModule() {
   return (
     <>
@@ -29,6 +30,7 @@ function ETimeModule() {
           <Route path="/OverTimeApproval" element={<OverTimeApproval />} />
           <Route path="/AttendanceControl" element={<AttendanceControl />} />
           <Route path="/Profile" element={<Profile />} />
+          <Route path="/AdminPayslip" element={<AdminPayslip />} />
         </Routes>
       </Layout>
     </>

@@ -113,6 +113,7 @@ function ShiftBreakdown({ rec }: { rec: AttendanceRecord }) {
 export default function EmployeeTime() {
   const [employeeID, setEmployeeID] = useState<string | null>(null);
   const [companyCode, setCompanyCode] = useState<string | null>(null);
+  const [allowSelfPayslip, setAllowSelfPayslip] = useState(true);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,11 +139,12 @@ export default function EmployeeTime() {
     const decoded = atob(raw);
     const email = decoded.split(":")[1];
     setUserEmail(email);
-    supabase.from("users").select("EmployeeID, CompanyCode, InitialLogin, UserType").eq("Email", email).single()
+    supabase.from("users").select("EmployeeID, CompanyCode, InitialLogin, UserType, PayStructure").eq("Email", email).single()
       .then(({ data, error: e }) => {
         if (e || !data) { setError("Could not load user."); return; }
         setEmployeeID(data.EmployeeID);
         setCompanyCode(data.CompanyCode);
+        setAllowSelfPayslip(data.PayStructure?.[0]?.AllowSelfPayslip !== false);
         const requiresPasswordChange = data.UserType !== "Special" && data.InitialLogin === true;
         if (requiresPasswordChange) setForcePasswordChange(true);
       });
@@ -513,9 +515,9 @@ export default function EmployeeTime() {
             {records.length > 0 && (
               <div
                 className="et-total-bar"
-                onClick={() => setShowPayslip(true)}
-                style={{ cursor: "pointer" }}
-                title="Click to view payslip"
+                onClick={() => { if (allowSelfPayslip) setShowPayslip(true); }}
+                style={{ cursor: allowSelfPayslip ? "pointer" : "default" }}
+                title={allowSelfPayslip ? "Click to view payslip" : "Payslip generation has been disabled by your administrator"}
               >
                 <div className="et-total-left">
                   <div className="et-total-label">Total working hours</div>
@@ -526,6 +528,9 @@ export default function EmployeeTime() {
                     <div className="et-total-value">{formatHours(totalHours)}</div>
                     <div className="et-total-sub">{presentDays} present · {absentDays} absent · {formatMinutes(totalDeduction)} deducted</div>
                   </div>
+                  {!allowSelfPayslip && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-faint)", textTransform: "uppercase", letterSpacing: ".05em" }}>Disabled</span>
+                  )}
                   <div className="et-total-icon">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
