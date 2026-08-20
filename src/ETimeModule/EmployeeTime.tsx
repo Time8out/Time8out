@@ -27,6 +27,8 @@ interface AttendanceRecord {
   StampsFeedback: any[];
 }
 
+
+
 function formatMinutes(mins: number): string {
   if (!mins || mins === 0) return "—";
   const h = Math.floor(mins / 60);
