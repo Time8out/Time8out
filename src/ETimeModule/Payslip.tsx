@@ -38,6 +38,12 @@ interface FeedbackItem extends StampFeedbackEntry {
   date: string;
 }
 
+interface SalaryAdvanceItem {
+  amount: number;
+  date: string;
+  reason: string | null;
+}
+
 const FEEDBACK_LABELS: Record<string, string> = {
   late: "Late Arrival",
   system_auto_logout: "Auto Logout",
@@ -134,6 +140,7 @@ export default function Payslip({
   });
   const [daysComputed, setDaysComputed] = useState(0);
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+  const [salaryAdvances, setSalaryAdvances] = useState<SalaryAdvanceItem[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -203,6 +210,18 @@ export default function Payslip({
       setEarnings(summed);
       setDaysComputed(rows.length);
       setFeedbackItems(allFeedback);
+
+      const { data: advanceRows } = await supabase
+        .from("SalaryAdvances")
+        .select("Amount, RequestDate, Reason")
+        .eq("EmployeeID", employeeID)
+        .eq("CompanyCode", companyCode)
+        .eq("Status", "approved")
+        .gte("RequestDate", dateFrom)
+        .lte("RequestDate", dateTo);
+
+      setSalaryAdvances((advanceRows ?? []).map(a => ({ amount: a.Amount, date: a.RequestDate, reason: a.Reason })));
+
       setLoading(false);
     }
     load();
@@ -225,7 +244,8 @@ export default function Payslip({
     amount: evaluateFormula(b.Formula, grossPay, totalWorkingHours, totalDeductionMinutes),
   }));
 
-  const totalDeductions = deductionItems.reduce((sum, d) => sum + d.amount, 0);
+  const totalSalaryAdvance = salaryAdvances.reduce((sum, a) => sum + a.amount, 0);
+  const totalDeductions = deductionItems.reduce((sum, d) => sum + d.amount, 0) + totalSalaryAdvance;
   const totalBonuses = bonusItems.reduce((sum, b) => sum + b.amount, 0);
   const netPay = grossPay - totalDeductions + totalBonuses;
 
@@ -663,7 +683,22 @@ export default function Payslip({
                     </div>
                   ))}
 
-                  {feedbackItems.length === 0 && deductionItems.length === 0 && (
+                  {salaryAdvances.map((a, i) => (
+                    <div className="ps2-row" key={`adv-${i}`}>
+                      <div className="ps2-row-main">
+                        <div className="ps2-row-label">
+                          <span className="ps2-fb-dot" style={{ background: "#991B1B" }} />
+                          Salary Advance
+                        </div>
+                        <div className="ps2-row-sub">
+                          {fmtDate(a.date)}{a.reason ? ` · ${a.reason}` : ""}
+                        </div>
+                      </div>
+                      <div className="ps2-row-amount neg">−{formatCurrency(a.amount, currency)}</div>
+                    </div>
+                  ))}
+
+                  {feedbackItems.length === 0 && deductionItems.length === 0 && salaryAdvances.length === 0 && (
                     <div className="ps2-empty">No deductions on record.</div>
                   )}
                 </div>

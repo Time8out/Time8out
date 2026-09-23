@@ -183,11 +183,11 @@ function AssignSchedule({ Email, CompanyCode }: Props) {
       id => id !== '' && validBreakIDSet.has(id)
     )
 
-    if (filledBreaks.length === 0) {
-      setMsg({ type: 'error', text: 'Please select at least one break.' })
-      setLoading(false)
-      return
-    }
+    // if (filledBreaks.length === 0) {
+    //   setMsg({ type: 'error', text: 'Please select at least one break.' })
+    //   setLoading(false)
+    //   return
+    // }
 
     const { error } = await supabase
       .from('users')
