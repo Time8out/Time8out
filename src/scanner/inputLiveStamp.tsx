@@ -140,7 +140,7 @@ export async function inputLiveStamp({ EmployeeID, companyCode }: { EmployeeID: 
     }
 
     // ── Step 4: Already finished? ──────────────────────────
-    if (attendance!.status === 'Finished') {
+    if (attendance!.status === 'Finished' || attendance!.status === 'Absent') {
       console.log('[inputLiveStamp] Employee already finished — skipping.');
       return { success: false, message: 'You have already completed your shift for today.' };
     }
